@@ -24,7 +24,7 @@ public:
 	void add_edge(CharType label, Node<CharType>* exit_node, EdgeType type)
 	{
 		Edge<CharType>* edge = create_edge<CharType>(exit_node, type);
-		edges.set_edge(label, edge);
+		edges.add_edge(label, edge);
 	}
 
 	Edge<CharType>* get_outgoing_edge(CharType letter)
@@ -73,13 +73,7 @@ public:
 		exit_node = node;
 	}
 
-	CharType get_label()
-	{
-		return this->label;
-	}
-
 private:
-	CharType label;
 	EdgeType type;
 	Node<CharType>* exit_node;
 };
@@ -135,7 +129,7 @@ public:
 		}
 	}
 
-	void set_edge(CharType letter, Edge<CharType>* edge)
+	void add_edge(CharType letter, Edge<CharType>* edge)
 	{
 		edges[letter] = edge;
 	}
@@ -202,7 +196,7 @@ Node<CharType>* update(Node<CharType>* source, Node<CharType>* active_node, Char
 		}
 		else // (outgoing_edge->get_type() == EdgeType::secondary)
 		{
-			suffix_node = split(source, current_node, outgoing_edge);
+			suffix_node = split(source, current_node, letter);
 		}
 	}
 	if (suffix_node == NULL)
@@ -240,9 +234,10 @@ update (activenode, a)
 */
 
 template <typename CharType>
-Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, Edge<CharType>* outgoing_edge)
+Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, CharType label)
 {
 	Node<CharType>* new_child_node = create_node<CharType>();
+	Edge<CharType>* outgoing_edge = parent_node->get_outgoing_edge(label);
 	Node<CharType>* child_node = outgoing_edge->get_exit_node();
 
 	assert(outgoing_edge->get_type() == EdgeType::secondary);
@@ -250,8 +245,9 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, Edge<
 	outgoing_edge->set_exit_node(new_child_node);
 	for (std::pair<CharType, Edge<CharType>*> pair : child_node->get_outgoing_edges().edges) // TODO: fix this mess
 	{
+		CharType label = pair.first;
 		Edge<CharType>* edge = pair.second;
-		new_child_node->add_edge(edge->get_label(), edge->get_exit_node(), EdgeType::secondary);
+		new_child_node->add_edge(label, edge->get_exit_node(), EdgeType::secondary);
 	}
 	new_child_node->suffix = child_node->suffix;
 	child_node->suffix = new_child_node;
@@ -259,7 +255,7 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, Edge<
 	while (current_node != source)
 	{
 		current_node = current_node->suffix;
-		Edge<CharType>* edge = current_node->get_outgoing_edge(outgoing_edge->get_label());
+		Edge<CharType>* edge = current_node->get_outgoing_edge(label);
 		if (edge->get_type() == EdgeType::secondary)
 		{
 			assert(edge->get_exit_node() == child_node);
