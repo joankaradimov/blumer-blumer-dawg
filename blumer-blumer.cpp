@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <cassert>
+#include <unordered_map>
 
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
@@ -23,12 +24,12 @@ public:
 	void add_edge(CharType label, Node<CharType>* exit_node, EdgeType type)
 	{
 		Edge<CharType>* edge = create_edge<CharType>(exit_node, type);
-		// TODO
+		edges.set_edge(label, edge);
 	}
 
 	Edge<CharType>* get_outgoing_edge(CharType letter)
 	{
-		return NULL; // TODO
+		return edges.get_edge(letter);
 	}
 
 	EdgeCollection<CharType> get_outgoing_edges()
@@ -38,14 +39,17 @@ public:
 	}
 
 	Node<CharType>* suffix;
+
+private:
+	EdgeCollection<CharType> edges;
 };
 
 template <typename CharType>
 class Edge
 {
 public:
-	Edge(EdgeType type)
-		:type(type)
+	Edge(Node<CharType>* exit_node, EdgeType type)
+		:exit_node(exit_node), type(type)
 	{
 	}
 
@@ -61,12 +65,12 @@ public:
 
 	Node<CharType>* get_exit_node()
 	{
-		return NULL; // TODO
+		return exit_node;
 	}
 
 	void set_exit_node(Node<CharType>* node)
 	{
-		// TODO
+		exit_node = node;
 	}
 
 	CharType get_label()
@@ -77,6 +81,7 @@ public:
 private:
 	CharType label;
 	EdgeType type;
+	Node<CharType>* exit_node;
 };
 
 template <typename CharType>
@@ -104,6 +109,8 @@ template <typename CharType>
 class EdgeCollection
 {
 public:
+	typedef std::unordered_map<CharType, Edge<CharType>*> EdgeCollectionType;
+
 	EdgeIterator<CharType> begin()
 	{
 		EdgeIterator<CharType> x;
@@ -115,18 +122,38 @@ public:
 		EdgeIterator<CharType> x;
 		return x; // TODO
 	}
+
+	Edge<CharType>* get_edge(CharType letter)
+	{
+		try
+		{
+			return edges.at(letter);
+		}
+		catch (std::out_of_range)
+		{
+			return NULL;
+		}
+	}
+
+	void set_edge(CharType letter, Edge<CharType>* edge)
+	{
+		edges[letter] = edge;
+	}
+	
+//private: TODO
+	EdgeCollectionType edges;
 };
 
 template <typename CharType>
 Node<CharType> *create_node()
 {
-	return NULL; // TODO
+	return new Node<CharType>; // TODO
 }
 
 template <typename CharType>
 Edge<CharType> *create_edge(Node<CharType>* exit_node, EdgeType type)
 {
-	return NULL; // TODO
+	return new Edge<CharType>(exit_node, type); // TODO
 }
 
 template <typename CharType>
@@ -221,9 +248,10 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, Edge<
 	assert(outgoing_edge->get_type() == EdgeType::secondary);
 	outgoing_edge->set_type(EdgeType::primary);
 	outgoing_edge->set_exit_node(new_child_node);
-	for (Edge<CharType>& edge : child_node->get_outgoing_edges())
+	for (std::pair<CharType, Edge<CharType>*> pair : child_node->get_outgoing_edges().edges) // TODO: fix this mess
 	{
-		new_child_node->add_edge(edge.get_label(), edge.get_exit_node(), EdgeType::secondary);
+		Edge<CharType>* edge = pair.second;
+		new_child_node->add_edge(edge->get_label(), edge->get_exit_node(), EdgeType::secondary);
 	}
 	new_child_node->suffix = child_node->suffix;
 	child_node->suffix = new_child_node;
