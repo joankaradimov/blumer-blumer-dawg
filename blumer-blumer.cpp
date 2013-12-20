@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <cassert>
 
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
@@ -217,7 +218,7 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, Edge<
 	Node<CharType>* new_child_node = create_node<CharType>();
 	Node<CharType>* child_node = outgoing_edge->get_exit_node();
 
-	_ASSERT(outgoing_edge->get_type() == EdgeType::secondary);
+	assert(outgoing_edge->get_type() == EdgeType::secondary);
 	outgoing_edge->set_type(EdgeType::primary);
 	outgoing_edge->set_exit_node(new_child_node);
 	for (Edge<CharType>& edge : child_node->get_outgoing_edges())
@@ -233,7 +234,7 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, Edge<
 		Edge<CharType>* edge = current_node->get_outgoing_edge(outgoing_edge->get_label());
 		if (edge->get_type() == EdgeType::secondary)
 		{
-			_ASSERT(edge->get_exit_node() == child_node);
+			assert(edge->get_exit_node() == child_node);
 			edge->set_exit_node(new_child_node);
 		}
 		else
