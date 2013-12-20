@@ -30,11 +30,6 @@ public:
 		return NULL; // TODO
 	}
 
-	Edge<CharType>* get_outgoing_edge(Node<CharType>* outgoing_node)
-	{
-		return NULL; // TODO
-	}
-
 	EdgeCollection<CharType> get_outgoing_edges()
 	{
 		EdgeCollection<CharType> collection;
@@ -134,17 +129,14 @@ Edge<CharType> *create_edge(Node<CharType>* exit_node, EdgeType type)
 }
 
 template <typename CharType>
-Node<CharType>* build_dawg(std::vector<std::basic_string<CharType>> words)
+Node<CharType>* build_dawg(std::basic_string<CharType> word)
 {
 	Node<CharType>* source = create_node<CharType>();
+	source->suffix = NULL;
 	Node<CharType>* active_node = source;
-	for (std::basic_string<CharType>& word : words)
+	for (CharType letter : word)
 	{
-		for (CharType letter : word)
-		{
-			active_node = update(source, active_node, letter);
-		}
-		active_node = source;
+		active_node = update(source, active_node, letter);
 	}
 	return source;
 }
@@ -163,51 +155,34 @@ B.Let activenode be source.
 template <typename CharType>
 Node<CharType>* update(Node<CharType>* source, Node<CharType>* active_node, CharType letter)
 {
-	Edge<CharType>* outgoing_edge = active_node->get_outgoing_edge(letter);
+	Node<CharType>* new_active_node = create_node<CharType>();
+	active_node->add_edge(letter, new_active_node, EdgeType::primary);
+	Node<CharType>* current_node = active_node;
+	Node<CharType>* suffix_node = NULL;
 
-	if (outgoing_edge)
+	while (current_node != source && suffix_node == NULL)
 	{
-		Node<CharType>* new_active_node = outgoing_edge->get_exit_node();
-		if (outgoing_edge->get_type() == EdgeType::primary)
+		current_node = current_node->suffix;
+		Edge<CharType>* outgoing_edge = current_node->get_outgoing_edge(letter);
+		if (outgoing_edge == NULL)
 		{
-			return new_active_node;
+			current_node->add_edge(letter, new_active_node, EdgeType::secondary);
 		}
-		else
+		else if (outgoing_edge->get_type() == EdgeType::primary)
 		{
-			return split(source, active_node, outgoing_edge);
+			suffix_node = outgoing_edge->get_exit_node();
+		}
+		else // (outgoing_edge->get_type() == EdgeType::secondary)
+		{
+			suffix_node = split(source, current_node, outgoing_edge);
 		}
 	}
-	else
+	if (suffix_node == NULL)
 	{
-		Node<CharType>* new_active_node = create_node<CharType>();
-		active_node->add_edge(letter, new_active_node, EdgeType::primary);
-		Node<CharType>* current_node = active_node;
-		Node<CharType>* suffix_node = NULL;
-
-		while (current_node != source && suffix_node == NULL)
-		{
-			current_node = current_node->suffix;
-			Edge<CharType>* outgoing_edge = current_node->get_outgoing_edge(letter);
-			if (outgoing_edge && outgoing_edge->get_type() == EdgeType::primary)
-			{
-				suffix_node = outgoing_edge->get_exit_node();
-			}
-			else if (outgoing_edge && outgoing_edge->get_type() == EdgeType::secondary)
-			{
-				suffix_node = split(source, current_node, outgoing_edge);
-			}
-			else
-			{
-				current_node->add_edge(letter, new_active_node, EdgeType::secondary);
-			}
-		}
-		if (suffix_node == NULL)
-		{
-			suffix_node = source;
-		}
-		new_active_node->suffix = suffix_node;
-		return new_active_node;
+		suffix_node = source;
 	}
+	new_active_node->suffix = suffix_node;
+	return new_active_node;
 }
 
 /*
@@ -255,9 +230,10 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, Edge<
 	while (current_node != source)
 	{
 		current_node = current_node->suffix;
-		Edge<CharType>* edge = current_node->get_outgoing_edge(child_node);
+		Edge<CharType>* edge = current_node->get_outgoing_edge(outgoing_edge->get_label());
 		if (edge->get_type() == EdgeType::secondary)
 		{
+			_ASSERT(edge->get_exit_node() == child_node);
 			edge->set_exit_node(new_child_node);
 		}
 		else
@@ -292,7 +268,7 @@ int main(int argc, char* argv[])
 {
 	// TODO: count the final state too (it has 0 children; 0 != 1)
 
-	std::vector<std::string> words = { "asd", "asdasdas", "qwe", "zxc" };
-	build_dawg<char>(words);
+	std::string word = "asdasdasdasqwezxc";
+	build_dawg<char>(word);
 	return 0;
 }
