@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <unordered_map>
+#include <fstream>
 
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
@@ -293,7 +294,9 @@ int main(int argc, char* argv[])
 {
 	// TODO: count the final state too (it has 0 children; 0 != 1)
 
-	std::string word = "asdasdasdasqwezxc";
-	build_dawg<char>(word);
+	char* input_filename = argv[1];
+	std::ifstream ifs(input_filename);
+	std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+	auto source = build_dawg<char>(content);
 	return 0;
 }
