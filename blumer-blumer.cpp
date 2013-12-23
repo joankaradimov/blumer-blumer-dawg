@@ -257,9 +257,9 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, CharT
 	{
 		current_node = current_node->suffix;
 		Edge<CharType>* edge = current_node->get_outgoing_edge(label);
-		if (edge->get_type() == EdgeType::secondary)
+		if (edge && edge->get_exit_node() == child_node)
 		{
-			assert(edge->get_exit_node() == child_node);
+			assert(edge->get_type() == EdgeType::secondary);
 			edge->set_exit_node(new_child_node);
 		}
 		else
