@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <unordered_map>
+#include <stack>
 #include <fstream>
 
 template <typename CharType> class Node;
@@ -18,13 +19,57 @@ enum EdgeType
 	primary, secondary,
 };
 
+template <typename T, int chunk_size = 10 * 1024 * 1024>
+class SimpleAllocator
+{
+public:
+	SimpleAllocator()
+	{
+		counter = chunk_size;
+	}
+
+	~SimpleAllocator()
+	{
+		while (memory_chunks.empty() == false)
+		{
+			T* chunk = memory_chunks.top();
+			memory_chunks.pop();
+			free(chunk);
+		}
+	}
+
+	T* alloc()
+	{
+		if (counter >= chunk_size)
+		{
+			T* new_chunk = (T*) malloc(chunk_size * sizeof(T));
+			counter = 0;
+			memory_chunks.push(new_chunk);
+		}
+		T* top_chunk = memory_chunks.top();
+		T* result = top_chunk + counter;
+		++counter;
+		return result;
+	}
+private:
+	int counter;
+	std::stack<T*> memory_chunks; // TODO: get rid of std::stack
+};
+
 template <typename CharType>
 class Node
 {
 public:
+	static Node<CharType>* create()
+	{
+		static SimpleAllocator<Node<CharType>> allocator;
+		Node<CharType>* result = allocator.alloc();
+		return new(result) Node<CharType>; // TODO: overload new, maybe
+	}
+
 	void add_edge(CharType label, Node<CharType>* exit_node, EdgeType type)
 	{
-		Edge<CharType>* edge = create_edge<CharType>(exit_node, type);
+		Edge<CharType>* edge = Edge<CharType>::create(exit_node, type);
 		edges.add_edge(label, edge);
 	}
 
@@ -49,6 +94,13 @@ template <typename CharType>
 class Edge
 {
 public:
+	static Edge<CharType>* create(Node<CharType>* exit_node, EdgeType type)
+	{
+		static SimpleAllocator<Edge<CharType>> allocator;
+		Edge<CharType>* result = allocator.alloc();
+		return new(result)Edge<CharType>(exit_node, type); // TODO
+	}
+
 	Edge(Node<CharType>* exit_node, EdgeType type)
 		:exit_node(exit_node), type(type)
 	{
@@ -140,21 +192,9 @@ public:
 };
 
 template <typename CharType>
-Node<CharType> *create_node()
-{
-	return new Node<CharType>; // TODO
-}
-
-template <typename CharType>
-Edge<CharType> *create_edge(Node<CharType>* exit_node, EdgeType type)
-{
-	return new Edge<CharType>(exit_node, type); // TODO
-}
-
-template <typename CharType>
 Node<CharType>* build_dawg(std::basic_string<CharType> word)
 {
-	Node<CharType>* source = create_node<CharType>();
+	Node<CharType>* source = Node<CharType>::create();
 	source->suffix = NULL;
 	Node<CharType>* active_node = source;
 	for (CharType letter : word)
@@ -178,7 +218,7 @@ B.Let activenode be source.
 template <typename CharType>
 Node<CharType>* update(Node<CharType>* source, Node<CharType>* active_node, CharType letter)
 {
-	Node<CharType>* new_active_node = create_node<CharType>();
+	Node<CharType>* new_active_node = Node<CharType>::create();
 	active_node->add_edge(letter, new_active_node, EdgeType::primary);
 	Node<CharType>* current_node = active_node;
 	Node<CharType>* suffix_node = NULL;
@@ -237,7 +277,7 @@ update (activenode, a)
 template <typename CharType>
 Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, CharType label)
 {
-	Node<CharType>* new_child_node = create_node<CharType>();
+	Node<CharType>* new_child_node = Node<CharType>::create();
 	Edge<CharType>* outgoing_edge = parent_node->get_outgoing_edge(label);
 	Node<CharType>* child_node = outgoing_edge->get_exit_node();
 
