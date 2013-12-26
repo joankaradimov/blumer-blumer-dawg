@@ -8,7 +8,7 @@
 
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
-template <typename CharType> class EdgeCollection;
+template <typename CharType> class EdgeHashCollection;
 template <typename CharType> class EdgeIterator;
 
 template <typename CharType> Node<CharType>* update(Node<CharType>* source, Node<CharType>* active_node, CharType letter);
@@ -87,7 +87,7 @@ public:
 		return edges.get_edge(letter);
 	}
 
-	EdgeCollection<CharType> get_outgoing_edges()
+	EdgeHashCollection<CharType> get_outgoing_edges()
 	{
 		return edges;
 	}
@@ -95,7 +95,7 @@ public:
 	Node<CharType>* suffix;
 
 private:
-	EdgeCollection<CharType> edges;
+	EdgeHashCollection<CharType> edges;
 };
 
 template <typename CharType>
@@ -161,7 +161,7 @@ public:
 };
 
 template <typename CharType>
-class EdgeCollection
+class EdgeHashCollection
 {
 public:
 	EdgeIterator<CharType> begin()
