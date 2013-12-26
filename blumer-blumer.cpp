@@ -72,6 +72,16 @@ public:
 		edges.add_edge(label, exit_node, type);
 	}
 
+	void add_secondary_edges(Node<CharType>* node)
+	{
+		for (std::pair<CharType, Edge<CharType>*> pair : node->edges.edges) // TODO: fix this mess
+		{
+			CharType label = pair.first;
+			Edge<CharType>* edge = pair.second;
+			this->add_edge(label, edge->get_exit_node(), EdgeType::secondary);
+		}
+	}
+
 	Edge<CharType>* get_outgoing_edge(CharType letter)
 	{
 		return edges.get_edge(letter);
@@ -79,8 +89,7 @@ public:
 
 	EdgeCollection<CharType> get_outgoing_edges()
 	{
-		EdgeCollection<CharType> collection;
-		return collection;
+		return edges;
 	}
 
 	Node<CharType>* suffix;
@@ -282,14 +291,10 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, CharT
 	assert(outgoing_edge->get_type() == EdgeType::secondary);
 	outgoing_edge->set_type(EdgeType::primary);
 	outgoing_edge->set_exit_node(new_child_node);
-	for (std::pair<CharType, Edge<CharType>*> pair : child_node->get_outgoing_edges().edges) // TODO: fix this mess
-	{
-		CharType label = pair.first;
-		Edge<CharType>* edge = pair.second;
-		new_child_node->add_edge(label, edge->get_exit_node(), EdgeType::secondary);
-	}
+	new_child_node->add_secondary_edges(child_node);
 	new_child_node->suffix = child_node->suffix;
 	child_node->suffix = new_child_node;
+
 	Node<CharType>* current_node = parent_node;
 	while (current_node != source)
 	{
