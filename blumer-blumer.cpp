@@ -110,7 +110,7 @@ public:
 	}
 
 	Edge(Node<CharType>* exit_node, EdgeType type)
-		:exit_node(exit_node), type(type)
+		:type(type), exit_node(exit_node)
 	{
 	}
 
