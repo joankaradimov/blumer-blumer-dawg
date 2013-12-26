@@ -69,8 +69,7 @@ public:
 
 	void add_edge(CharType label, Node<CharType>* exit_node, EdgeType type)
 	{
-		Edge<CharType>* edge = Edge<CharType>::create(exit_node, type);
-		edges.add_edge(label, edge);
+		edges.add_edge(label, exit_node, type);
 	}
 
 	Edge<CharType>* get_outgoing_edge(CharType letter)
@@ -156,8 +155,6 @@ template <typename CharType>
 class EdgeCollection
 {
 public:
-	typedef std::unordered_map<CharType, Edge<CharType>*> EdgeCollectionType;
-
 	EdgeIterator<CharType> begin()
 	{
 		EdgeIterator<CharType> x;
@@ -182,13 +179,14 @@ public:
 		}
 	}
 
-	void add_edge(CharType letter, Edge<CharType>* edge)
+	void add_edge(CharType letter, Node<CharType>* exit_node, EdgeType type)
 	{
+		Edge<CharType>* edge = Edge<CharType>::create(exit_node, type);
 		edges[letter] = edge;
 	}
 	
 //private: TODO
-	EdgeCollectionType edges;
+	std::unordered_map<CharType, Edge<CharType>*> edges;
 };
 
 template <typename CharType>
