@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <string>
 #include <vector>
 #include <cassert>
@@ -124,11 +123,6 @@ public:
 		return edges.get_edge(letter);
 	}
 
-	EdgeHashCollection<CharType> get_outgoing_edges()
-	{
-		return edges;
-	}
-
 	AllocatorPtr<Node<CharType>> suffix;
 private:
 	EdgeHashCollection<CharType> edges;
@@ -176,42 +170,9 @@ private:
 };
 
 template <typename CharType>
-class EdgeIterator
-{
-public:
-	Edge<CharType> operator*()
-	{
-		Edge<CharType>* x;
-		return *x; // TODO
-	}
-
-	EdgeIterator operator++()
-	{
-		return *this; // TODO
-	}
-
-	bool operator!=(const EdgeIterator<CharType>& iter) const
-	{
-		return true; // TODO
-	}
-};
-
-template <typename CharType>
 class EdgeHashCollection
 {
 public:
-	EdgeIterator<CharType> begin()
-	{
-		EdgeIterator<CharType> x;
-		return x; // TODO
-	}
-
-	EdgeIterator<CharType> end()
-	{
-		EdgeIterator<CharType> x;
-		return x; // TODO
-	}
-
 	AllocatorPtr<Edge<CharType>> get_edge(CharType letter)
 	{
 		try
@@ -247,17 +208,6 @@ AllocatorPtr<Node<CharType>> build_dawg(std::basic_string<CharType> word)
 	return source;
 }
 
-/*
-builddawg(S)
-1. Create a node named source.
-2. Let activenode be source.
-3. For each word w of S do:*
-A.For each letter a of w do :
-Let activenode be update(activenode, a).
-B.Let activenode be source.
-4. Return source.
-*/
-
 template <typename CharType>
 AllocatorPtr<Node<CharType>> update(AllocatorPtr<Node<CharType>> source, AllocatorPtr<Node<CharType>> active_node, CharType letter)
 {
@@ -291,32 +241,6 @@ AllocatorPtr<Node<CharType>> update(AllocatorPtr<Node<CharType>> source, Allocat
 	return new_active_node;
 }
 
-/*
-update (activenode, a)
-  1. If activenode has an outgoing edge labeled a, then*
-    A. Let newactivenode be the node that this edge leads to.*
-    B. If this edge is primary, return newactivenode.*
-    C. Else, return split (activenode, newactivenode).*
-  2. Else
-    A. Create a node named newactivenode.
-    B. Create a primary edge labeled a from activenode to newactivenode.
-    C. Let currentnode be activenode.
-    D. Let suflxnode be undefined.
-    E. While currentnode isn’t source and sufixnode is undefined do:
-        i. Let currentnode be the node pointed to by the sufftx pointer
-           of currentnode.
-       ii. If currentnode has a primary outgoing edge labeled a,
-           then let sufixnode be the node that this edge leads to.
-      iii. Else, if currentnode has a secondary outgoing edge labeled a then
-             a. Let childnode be the node that this edge leads to.
-             b. Let suffixnode be split (currentnode, childnode).
-       iv. Else, create a secondary edge from currentnode to
-           newactivenode labeled a. 
-    F. If sufixnode is still undefined, let suffixnode be source.
-    G. Set the suffix pointer of newactivenode to point to sufixnode.
-    H. Return newactivenode.
-*/
-
 template <typename CharType>
 AllocatorPtr<Node<CharType>> split(AllocatorPtr<Node<CharType>> source, AllocatorPtr<Node<CharType>> parent_node, CharType label)
 {
@@ -348,26 +272,6 @@ AllocatorPtr<Node<CharType>> split(AllocatorPtr<Node<CharType>> source, Allocato
 	}
 	return new_child_node;
 }
-
-/*
-split (parentnode, childnode)
-  1. Create a node called newchildnode.
-  2. Make the secondary edge from parentnode to childnode into a primary
-     edge from parentnode to newchildnode (with the same label).
-  3. For every primary and secondary outgoing edge of childnode, create a
-     secondary outgoing edge of newchildnode with the same label and
-     leading to the same node.
-  4. Set the suffix pointer of newchildnode equal to that of childnode.
-  5. Reset the suffix pointer of childnode to point to newchildnode.
-  6. Let currentnode be parentnode.
-  7. While currentnode isn’t source do:
-    A. Let currentnode be the node pointed to by the suffrx pointer
-       of currentnode.
-    B. If currentnode has a secondary edge to childnode, then make it
-       a secondary edge to newchildnode (with the same label).
-    C. Else, break out of the while loop.
-  8. Return newchildnode.
-*/
 
 int main(int argc, char* argv[])
 {
