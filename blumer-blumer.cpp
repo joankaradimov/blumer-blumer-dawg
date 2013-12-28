@@ -3,9 +3,10 @@
 #include <vector>
 #include <cassert>
 #include <unordered_map>
-#include <stack>
 #include <fstream>
 
+template <typename T> class AllocatorPtr;
+template <typename T, int chunk_size = 10 * 1024 * 1024> class SimpleAllocator;
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
 template <typename CharType> class EdgeHashCollection;
@@ -19,10 +20,59 @@ enum EdgeType
 	primary, secondary,
 };
 
-template <typename T, int chunk_size = 10 * 1024 * 1024>
+template <typename T>
+class AllocatorPtr
+{
+public:
+	AllocatorPtr() {}
+	AllocatorPtr(int data) : data(data) {}
+	int operator/(int x) { return data / x; }
+	int operator%(int x) { return data % x; }
+	int operator==(const AllocatorPtr<T>& other) { return data == other.data; }
+	int operator!=(const AllocatorPtr<T>& other) { return data != other.data; }
+
+	T* operator->()
+	{
+		return SimpleAllocator<T>::get_instance().get(data);
+	}
+
+	bool not_null() { return data;  }
+private:
+	int data;
+};
+
+template <typename T, int chunk_size>
 class SimpleAllocator
 {
 public:
+	AllocatorPtr<T> alloc()
+	{
+		if (counter >= chunk_size)
+		{
+			T* new_chunk = (T*) malloc(chunk_size * sizeof(T));
+			counter = 0;
+			memory_chunks.push_back(new_chunk);
+		}
+		T* top_chunk = memory_chunks.back();
+		AllocatorPtr<T> result = (memory_chunks.size() - 1) * chunk_size + counter;
+		++counter;
+		return result;
+	}
+
+	T* get(AllocatorPtr<T> index)
+	{
+		int chunk_index = index / chunk_size;
+		int inner_index = index % chunk_size;
+		T* chunk = memory_chunks[chunk_index];
+		return chunk + inner_index;
+	}
+
+	static SimpleAllocator<T>& get_instance()
+	{
+		static SimpleAllocator<T> instance;
+		return instance;
+	}
+private:
 	SimpleAllocator()
 	{
 		counter = chunk_size;
@@ -32,57 +82,44 @@ public:
 	{
 		while (memory_chunks.empty() == false)
 		{
-			T* chunk = memory_chunks.top();
-			memory_chunks.pop();
+			T* chunk = memory_chunks.back();
+			memory_chunks.pop_back();
 			free(chunk);
 		}
 	}
 
-	T* alloc()
-	{
-		if (counter >= chunk_size)
-		{
-			T* new_chunk = (T*) malloc(chunk_size * sizeof(T));
-			counter = 0;
-			memory_chunks.push(new_chunk);
-		}
-		T* top_chunk = memory_chunks.top();
-		T* result = top_chunk + counter;
-		++counter;
-		return result;
-	}
-private:
 	int counter;
-	std::stack<T*> memory_chunks; // TODO: get rid of std::stack
+	std::vector<T*> memory_chunks; // TODO: get rid of std::vector
 };
 
 template <typename CharType>
 class Node
 {
 public:
-	static Node<CharType>* create()
+	static AllocatorPtr<Node<CharType>> create()
 	{
-		static SimpleAllocator<Node<CharType>> allocator;
-		Node<CharType>* result = allocator.alloc();
-		return new(result) Node<CharType>; // TODO: overload new, maybe
+		SimpleAllocator<Node<CharType>>& allocator = SimpleAllocator<Node<CharType>>::get_instance();
+		AllocatorPtr<Node<CharType>> result = allocator.alloc();
+		new(allocator.get(result)) Node<CharType>; // TODO: overload new, maybe
+		return result;
 	}
 
-	void add_edge(CharType label, Node<CharType>* exit_node, EdgeType type)
+	void add_edge(CharType label, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
 		edges.add_edge(label, exit_node, type);
 	}
 
-	void add_secondary_edges(Node<CharType>* node)
+	void add_secondary_edges(AllocatorPtr<Node<CharType>> node)
 	{
-		for (std::pair<CharType, Edge<CharType>*> pair : node->edges.edges) // TODO: fix this mess
+		for (std::pair<CharType, AllocatorPtr<Edge<CharType>>> pair : node->edges.edges) // TODO: fix this mess
 		{
 			CharType label = pair.first;
-			Edge<CharType>* edge = pair.second;
+			AllocatorPtr<Edge<CharType>> edge = pair.second;
 			this->add_edge(label, edge->get_exit_node(), EdgeType::secondary);
 		}
 	}
 
-	Edge<CharType>* get_outgoing_edge(CharType letter)
+	AllocatorPtr<Edge<CharType>> get_outgoing_edge(CharType letter)
 	{
 		return edges.get_edge(letter);
 	}
@@ -92,8 +129,7 @@ public:
 		return edges;
 	}
 
-	Node<CharType>* suffix;
-
+	AllocatorPtr<Node<CharType>> suffix;
 private:
 	EdgeHashCollection<CharType> edges;
 };
@@ -102,14 +138,15 @@ template <typename CharType>
 class Edge
 {
 public:
-	static Edge<CharType>* create(Node<CharType>* exit_node, EdgeType type)
+	static AllocatorPtr<Edge<CharType>> create(AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		static SimpleAllocator<Edge<CharType>> allocator;
-		Edge<CharType>* result = allocator.alloc();
-		return new(result)Edge<CharType>(exit_node, type); // TODO
+		SimpleAllocator<Edge<CharType>>& allocator = SimpleAllocator<Edge<CharType>>::get_instance();
+		AllocatorPtr<Edge<CharType>> result = allocator.alloc();
+		new(allocator.get(result))Edge<CharType>(exit_node, type); // TODO
+		return result;
 	}
 
-	Edge(Node<CharType>* exit_node, EdgeType type)
+	Edge(AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 		:type(type), exit_node(exit_node)
 	{
 	}
@@ -124,19 +161,18 @@ public:
 		this->type = type;
 	}
 
-	Node<CharType>* get_exit_node()
+	AllocatorPtr<Node<CharType>> get_exit_node()
 	{
 		return exit_node;
 	}
 
-	void set_exit_node(Node<CharType>* node)
+	void set_exit_node(AllocatorPtr<Node<CharType>> node)
 	{
 		exit_node = node;
 	}
-
 private:
 	EdgeType type;
-	Node<CharType>* exit_node;
+	AllocatorPtr<Node<CharType>> exit_node;
 };
 
 template <typename CharType>
@@ -176,7 +212,7 @@ public:
 		return x; // TODO
 	}
 
-	Edge<CharType>* get_edge(CharType letter)
+	AllocatorPtr<Edge<CharType>> get_edge(CharType letter)
 	{
 		try
 		{
@@ -188,22 +224,22 @@ public:
 		}
 	}
 
-	void add_edge(CharType letter, Node<CharType>* exit_node, EdgeType type)
+	void add_edge(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		Edge<CharType>* edge = Edge<CharType>::create(exit_node, type);
+		AllocatorPtr<Edge<CharType>> edge = Edge<CharType>::create(exit_node, type);
 		edges[letter] = edge;
 	}
 	
-//private: TODO
-	std::unordered_map<CharType, Edge<CharType>*> edges;
+// private: TODO
+	std::unordered_map<CharType, AllocatorPtr<Edge<CharType>>> edges;
 };
 
 template <typename CharType>
-Node<CharType>* build_dawg(std::basic_string<CharType> word)
+AllocatorPtr<Node<CharType>> build_dawg(std::basic_string<CharType> word)
 {
-	Node<CharType>* source = Node<CharType>::create();
+	AllocatorPtr<Node<CharType>> source = Node<CharType>::create();
 	source->suffix = NULL;
-	Node<CharType>* active_node = source;
+	AllocatorPtr<Node<CharType>> active_node = source;
 	for (CharType letter : word)
 	{
 		active_node = update(source, active_node, letter);
@@ -223,17 +259,17 @@ B.Let activenode be source.
 */
 
 template <typename CharType>
-Node<CharType>* update(Node<CharType>* source, Node<CharType>* active_node, CharType letter)
+AllocatorPtr<Node<CharType>> update(AllocatorPtr<Node<CharType>> source, AllocatorPtr<Node<CharType>> active_node, CharType letter)
 {
-	Node<CharType>* new_active_node = Node<CharType>::create();
+	AllocatorPtr<Node<CharType>> new_active_node = Node<CharType>::create();
 	active_node->add_edge(letter, new_active_node, EdgeType::primary);
-	Node<CharType>* current_node = active_node;
-	Node<CharType>* suffix_node = NULL;
+	AllocatorPtr<Node<CharType>> current_node = active_node;
+	AllocatorPtr<Node<CharType>> suffix_node = NULL;
 
 	while (current_node != source && suffix_node == NULL)
 	{
 		current_node = current_node->suffix;
-		Edge<CharType>* outgoing_edge = current_node->get_outgoing_edge(letter);
+		AllocatorPtr<Edge<CharType>> outgoing_edge = current_node->get_outgoing_edge(letter);
 		if (outgoing_edge == NULL)
 		{
 			current_node->add_edge(letter, new_active_node, EdgeType::secondary);
@@ -282,11 +318,11 @@ update (activenode, a)
 */
 
 template <typename CharType>
-Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, CharType label)
+AllocatorPtr<Node<CharType>> split(AllocatorPtr<Node<CharType>> source, AllocatorPtr<Node<CharType>> parent_node, CharType label)
 {
-	Node<CharType>* new_child_node = Node<CharType>::create();
-	Edge<CharType>* outgoing_edge = parent_node->get_outgoing_edge(label);
-	Node<CharType>* child_node = outgoing_edge->get_exit_node();
+	AllocatorPtr<Node<CharType>> new_child_node = Node<CharType>::create();
+	AllocatorPtr<Edge<CharType>> outgoing_edge = parent_node->get_outgoing_edge(label);
+	AllocatorPtr<Node<CharType>> child_node = outgoing_edge->get_exit_node();
 
 	assert(outgoing_edge->get_type() == EdgeType::secondary);
 	outgoing_edge->set_type(EdgeType::primary);
@@ -295,12 +331,12 @@ Node<CharType>* split(Node<CharType>* source, Node<CharType>* parent_node, CharT
 	new_child_node->suffix = child_node->suffix;
 	child_node->suffix = new_child_node;
 
-	Node<CharType>* current_node = parent_node;
+	AllocatorPtr<Node<CharType>> current_node = parent_node;
 	while (current_node != source)
 	{
 		current_node = current_node->suffix;
-		Edge<CharType>* edge = current_node->get_outgoing_edge(label);
-		if (edge && edge->get_exit_node() == child_node)
+		AllocatorPtr<Edge<CharType>> edge = current_node->get_outgoing_edge(label);
+		if (edge.not_null() && edge->get_exit_node() == child_node)
 		{
 			assert(edge->get_type() == EdgeType::secondary);
 			edge->set_exit_node(new_child_node);
