@@ -16,3 +16,9 @@ $(TARGET): $(TARGET).cpp
 
 clean:
 	$(RM) $(TARGET)
+
+example-data:
+	./generate-data.py 10000000 > example-data
+
+clean-example-data:
+	$(RM) example-data
