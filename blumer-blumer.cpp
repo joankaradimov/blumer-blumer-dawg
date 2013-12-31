@@ -44,6 +44,8 @@ template <typename T, int chunk_size>
 class SimpleAllocator
 {
 public:
+	friend class NodeStatsBuilder;
+
 	AllocatorPtr<T> alloc()
 	{
 		if (counter >= chunk_size)
@@ -53,7 +55,7 @@ public:
 			memory_chunks.push_back(new_chunk);
 		}
 		T* top_chunk = memory_chunks.back();
-		AllocatorPtr<T> result = (memory_chunks.size() - 1) * chunk_size + counter;
+		AllocatorPtr<T> result = allocations_count();
 		++counter;
 		return result;
 	}
@@ -87,6 +89,12 @@ private:
 		}
 	}
 
+	int allocations_count()
+	{
+		int filled_chunk_count = memory_chunks.size() - 1;
+		return filled_chunk_count * chunk_size + counter;
+	}
+
 	int counter;
 	std::vector<T*> memory_chunks; // TODO: get rid of std::vector
 };
@@ -101,6 +109,11 @@ public:
 		AllocatorPtr<Node<CharType>> result = allocator.alloc();
 		new(allocator.get(result)) Node<CharType>; // TODO: overload new, maybe
 		return result;
+	}
+
+	int get_edge_count()
+	{
+		return edges.edges.size();
 	}
 
 	void add_edge(CharType label, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
@@ -273,6 +286,39 @@ AllocatorPtr<Node<CharType>> split(AllocatorPtr<Node<CharType>> source, Allocato
 	return new_child_node;
 }
 
+class NodeStatsBuilder
+{
+public:
+	typedef Node<char> NodeT;
+
+	void build()
+	{
+		for (int i = 0; i < 26; ++i)
+		{
+			counts[i] = 0;
+		}
+		SimpleAllocator<Node<char>>& allocator = SimpleAllocator<Node<char>>::get_instance();
+		int allocations_count = allocator.allocations_count();
+		for (int i = 0; i < allocations_count; ++i)
+		{
+			Node<char>* ptr = allocator.get(i);
+			int count = ptr->get_edge_count();
+			counts[count] += 1;
+		}
+	}
+
+	void print()
+	{
+		for (int i = 0; i < 26; ++i)
+		{
+			printf("%d: %d\n", i, counts[i]);
+		}
+	}
+
+private:
+	int counts[26];
+};
+
 int main(int argc, char* argv[])
 {
 	// TODO: count the final state too (it has 0 children; 0 != 1)
@@ -280,6 +326,11 @@ int main(int argc, char* argv[])
 	char* input_filename = argv[1];
 	std::ifstream ifs(input_filename);
 	std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
-	auto source = build_dawg<char>(content);
+	build_dawg<char>(content);
+
+	NodeStatsBuilder stats;
+	stats.build();
+	stats.print();
+
 	return 0;
 }
