@@ -77,6 +77,7 @@ private:
 	SimpleAllocator()
 	{
 		counter = chunk_size;
+		alloc(); // create a NULL pointer for this allocator
 	}
 
 	~SimpleAllocator()
