@@ -294,13 +294,13 @@ public:
 
 	void build()
 	{
-		for (int i = 0; i < 26; ++i)
+		for (int i = 0; i < 27; ++i)
 		{
 			counts[i] = 0;
 		}
 		SimpleAllocator<Node<char>>& allocator = SimpleAllocator<Node<char>>::get_instance();
 		int allocations_count = allocator.allocations_count();
-		for (int i = 0; i < allocations_count; ++i)
+		for (int i = 1; i < allocations_count; ++i)
 		{
 			Node<char>* ptr = allocator.get(i);
 			int count = ptr->get_edge_count();
@@ -310,14 +310,14 @@ public:
 
 	void print()
 	{
-		for (int i = 0; i < 26; ++i)
+		for (int i = 0; i < 27; ++i)
 		{
 			printf("%d: %d\n", i, counts[i]);
 		}
 	}
 
 private:
-	int counts[26];
+	int counts[27];
 };
 
 int main(int argc, char* argv[])
