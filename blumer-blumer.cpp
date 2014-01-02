@@ -23,8 +23,9 @@ template <typename T>
 class AllocatorPtr
 {
 public:
-	AllocatorPtr() : data(0) {} // TODO: get rid of this constructor
+	AllocatorPtr() : AllocatorPtr(0) {} // TODO: get rid of this constructor
 	AllocatorPtr(int data) : data(data) {}
+
 	int operator/(int x) { return data / x; }
 	int operator%(int x) { return data % x; }
 	int operator==(const AllocatorPtr<T>& other) { return data == other.data; }
@@ -42,7 +43,7 @@ public:
 		return *SimpleAllocator<T>::get_instance().get(data);
 	}
 
-	bool not_null() { return data;  }
+	bool not_null() { return data; }
 
 	int to_int()
 	{
