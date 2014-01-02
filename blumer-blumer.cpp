@@ -124,58 +124,131 @@ public:
 		return result;
 	}
 
-	Node()
+	Node():
+		edge_collection_type(EdgeCollectionType::single_node), outgoing_edge_label(0)
 	{
-		AllocatorPtr<EdgeHashCollection<CharType>> edges_hash_ptr = EdgeHashCollection<CharType>::create();
-		ptr = edges_hash_ptr.to_int();
 	}
 
 	~Node()
 	{
+		if (edge_collection_type == EdgeCollectionType::edges_hash)
+		{
+			// TODO
+		}
 	}
 
 	int get_edge_count()
 	{
-		AllocatorPtr<EdgeHashCollection<CharType>> edges = get_ptr_value<EdgeHashCollection<CharType>>();
-		return edges->edges.size();
+		if (edge_collection_type == EdgeCollectionType::single_node)
+		{
+			return outgoing_edge_label != 0;
+		}
+		else if (edge_collection_type == EdgeCollectionType::edges_hash)
+		{
+			return ptr_as_edges_hash()->edges.size();
+		}
+		else
+		{
+			assert(false);
+		}
 	}
 
 	void add_edge(CharType label, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		AllocatorPtr<EdgeHashCollection<CharType>> edges = get_ptr_value<EdgeHashCollection<CharType>>();
-		edges->add_edge(label, exit_node, type);
+		if (edge_collection_type == EdgeCollectionType::single_node)
+		{
+			if (outgoing_edge_label == 0)
+			{
+				outgoing_edge_label = label;
+				ptr = exit_node.to_int();
+				outgoing_edge_type = type;
+			}
+			else
+			{
+				edge_collection_type = EdgeCollectionType::edges_hash;
+				AllocatorPtr<EdgeHashCollection<CharType>> edges_ptr = EdgeHashCollection<CharType>::create();
+				edges_ptr->add_edge(outgoing_edge_label, ptr, (EdgeType) outgoing_edge_type);
+				ptr = edges_ptr.to_int();
+				edges_ptr->add_edge(label, exit_node, type);
+			}
+		}
+		else if (edge_collection_type == EdgeCollectionType::edges_hash)
+		{
+			ptr_as_edges_hash()->add_edge(label, exit_node, type);
+		}
 	}
 
 	void add_secondary_edges(AllocatorPtr<Node<CharType>> node)
 	{
-		AllocatorPtr<EdgeHashCollection<CharType>> edges = node->get_ptr_value<EdgeHashCollection<CharType>>();
-		for (std::pair<CharType, AllocatorPtr<Edge<CharType>>> pair : edges->edges) // TODO: fix this mess
+		if (node->edge_collection_type == EdgeCollectionType::single_node)
 		{
-			CharType label = pair.first;
-			AllocatorPtr<Edge<CharType>> edge = pair.second;
-			this->add_edge(label, edge->get_exit_node(), EdgeType::secondary);
+			this->add_edge(node->outgoing_edge_label, node->ptr, EdgeType::secondary);
+		}
+		else if (node->edge_collection_type == EdgeCollectionType::edges_hash)
+		{
+			AllocatorPtr<EdgeHashCollection<CharType>> edges = node->ptr_as_edges_hash();
+			for (std::pair<CharType, AllocatorPtr<Edge<CharType>>> pair : edges->edges) // TODO: fix this mess
+			{
+				CharType label = pair.first;
+				AllocatorPtr<Edge<CharType>> edge = pair.second;
+				this->add_edge(label, edge->get_exit_node(), EdgeType::secondary);
+			}
 		}
 	}
 
 	void set_outgoing_edge_props(CharType label, EdgeType edge_type, AllocatorPtr<Node<CharType>> exit_node)
 	{
-		AllocatorPtr<EdgeHashCollection<CharType>> edges = get_ptr_value<EdgeHashCollection<CharType>>();
-		AllocatorPtr<Edge<CharType>> edge = edges->get_edge(label);
-		edge->set_type(edge_type);
-		edge->set_exit_node(exit_node);
+		if (edge_collection_type == EdgeCollectionType::single_node)
+		{
+			assert(label == outgoing_edge_label);
+			outgoing_edge_type = edge_type;
+			ptr = exit_node.to_int();
+		}
+		else if (edge_collection_type == EdgeCollectionType::edges_hash)
+		{
+			AllocatorPtr<EdgeHashCollection<CharType>> edges = ptr_as_edges_hash();
+			AllocatorPtr<Edge<CharType>> edge = edges->get_edge(label);
+			edge->set_type(edge_type);
+			edge->set_exit_node(exit_node);
+		}
+		else
+		{
+			assert(false);
+		}
 	}
 
 	const Edge<CharType> get_outgoing_edge(CharType letter)
 	{
-		AllocatorPtr<EdgeHashCollection<CharType>> edges = get_ptr_value<EdgeHashCollection<CharType>>();
-		AllocatorPtr<Edge<CharType>> edge = edges->get_edge(letter);
-		if (edge.not_null())
+		if (edge_collection_type == EdgeCollectionType::single_node)
 		{
-			return *edge;
+			if (outgoing_edge_label == letter)
+			{
+				AllocatorPtr<Node<CharType>> exit_node = ptr_as_node();
+				EdgeType type = (EdgeType) outgoing_edge_type;
+				const Edge<CharType> result(exit_node, type);
+				return result;
+			}
+			else
+			{
+				return Edge<CharType>::non_existant();
+			}
+		}
+		else if (edge_collection_type == EdgeCollectionType::edges_hash)
+		{
+			AllocatorPtr<EdgeHashCollection<CharType>> edges = ptr_as_edges_hash();
+			AllocatorPtr<Edge<CharType>> edge = edges->get_edge(letter);
+			if (edge.not_null())
+			{
+				return *edge;
+			}
+			else
+			{
+				return Edge<CharType>::non_existant();
+			}
 		}
 		else
 		{
-			return Edge<CharType>::non_existant();
+			assert(false);
 		}
 	}
 
@@ -186,17 +259,31 @@ public:
 
 	AllocatorPtr<Node<CharType>> get_suffix()
 	{
-		return AllocatorPtr<Node<CharType>>(suffix);
+		return suffix;
 	}
-private:
 
-	template <typename T> AllocatorPtr<T> get_ptr_value()
+	AllocatorPtr<Node<CharType>> ptr_as_node()
 	{
-		AllocatorPtr<T> allocator_ptr = ptr;
+		assert(edge_collection_type == EdgeCollectionType::single_node);
 		return ptr;
 	}
 
+	AllocatorPtr<EdgeHashCollection<CharType>> ptr_as_edges_hash()
+	{
+		assert(edge_collection_type == EdgeCollectionType::edges_hash);
+		return ptr;
+	}
+private:
+	enum EdgeCollectionType
+	{
+		single_node,
+		edges_hash,
+	};
+
 	unsigned long long suffix : 28;
+	unsigned long long edge_collection_type : 2;
+	unsigned long long outgoing_edge_label : 5;
+	unsigned long long outgoing_edge_type : 1;
 	unsigned long long ptr : 28;
 };
 
@@ -300,6 +387,7 @@ AllocatorPtr<Node<CharType>> build_dawg(std::basic_string<CharType> word)
 	AllocatorPtr<Node<CharType>> active_node = source;
 	for (CharType letter : word)
 	{
+		letter &= 0x1f; // TODO: a nicer solution to this
 		active_node = update(source, active_node, letter);
 	}
 	return source;
