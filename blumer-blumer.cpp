@@ -1,11 +1,10 @@
 #include <string>
-#include <vector>
 #include <cassert>
 #include <unordered_map>
 #include <fstream>
 
 template <typename T> class AllocatorPtr;
-template <typename T, int chunk_size = 10 * 1024 * 1024> class SimpleAllocator;
+template <typename T, int chunk_size = 8 * 1024 * 1024, int max_chunks = 32> class SimpleAllocator; // 5 + 23 = 28 bits for addressing
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
 template <typename CharType> class EdgeHashCollection;
@@ -53,7 +52,7 @@ private:
 	int data;
 };
 
-template <typename T, int chunk_size>
+template <typename T, int chunk_size, int max_chunks>
 class SimpleAllocator
 {
 public:
@@ -63,11 +62,12 @@ public:
 	{
 		if (counter >= chunk_size)
 		{
-			T* new_chunk = (T*) malloc(chunk_size * sizeof(T));
+			assert(chunk_counter < max_chunks);
+			memory_chunks[chunk_counter] = (T*)malloc(chunk_size * sizeof(T));
 			counter = 0;
-			memory_chunks.push_back(new_chunk);
+			++chunk_counter;
 		}
-		T* top_chunk = memory_chunks.back();
+		T* top_chunk = memory_chunks[chunk_counter - 1];
 		AllocatorPtr<T> result = allocations_count();
 		++counter;
 		return result;
@@ -87,30 +87,28 @@ public:
 		return instance;
 	}
 private:
-	SimpleAllocator()
+	SimpleAllocator() : counter(chunk_size), chunk_counter(0)
 	{
-		counter = chunk_size;
 		alloc(); // create a NULL pointer for this allocator
 	}
 
 	~SimpleAllocator()
 	{
-		while (memory_chunks.empty() == false)
+		for (int i = 0; i < chunk_counter; i++)
 		{
-			T* chunk = memory_chunks.back();
-			memory_chunks.pop_back();
-			free(chunk);
+			free(memory_chunks[i]);
 		}
 	}
 
 	int allocations_count()
 	{
-		int filled_chunk_count = memory_chunks.size() - 1;
+		int filled_chunk_count = chunk_counter - 1;
 		return filled_chunk_count * chunk_size + counter;
 	}
 
 	int counter;
-	std::vector<T*> memory_chunks; // TODO: get rid of std::vector
+	int chunk_counter;
+	T* memory_chunks[max_chunks];
 };
 
 template <typename CharType>
