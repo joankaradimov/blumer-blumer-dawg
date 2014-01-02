@@ -5,6 +5,7 @@ CC = g++
 #  -g    adds debugging information to the executable file
 #  -Wall turns on most, but not all, compiler warnings
 CFLAGS  = -g -Wall --std=c++11
+DEFINES = -DNDEBUG
 
 # the build target executable:
 TARGET = blumer-blumer
@@ -12,7 +13,7 @@ TARGET = blumer-blumer
 all: $(TARGET)
 
 $(TARGET): $(TARGET).cpp
-	$(CC) $(CFLAGS) -o $(TARGET) $(TARGET).cpp
+	$(CC) $(CFLAGS) $(DEFINES) -o $(TARGET) $(TARGET).cpp
 
 clean:
 	$(RM) $(TARGET)
