@@ -48,6 +48,11 @@ public:
 	{
 		return data;
 	}
+
+	bool is_valid()
+	{
+		return SimpleAllocator<T>::get_instance().is_valid(data);
+	}
 private:
 	int data;
 };
@@ -73,12 +78,19 @@ public:
 		return result;
 	}
 
-	T* get(AllocatorPtr<T> index)
+	T* get(int index)
 	{
 		int chunk_index = index / chunk_size;
 		int inner_index = index % chunk_size;
 		T* chunk = memory_chunks[chunk_index];
 		return chunk + inner_index;
+	}
+
+	bool is_valid(int index)
+	{
+		int chunk_index = index / chunk_size;
+		int inner_index = index % chunk_size;
+		return chunk_index < chunk_counter && inner_index < counter;
 	}
 
 	static SimpleAllocator<T>& get_instance()
@@ -119,7 +131,7 @@ public:
 	{
 		SimpleAllocator<Node<CharType>>& allocator = SimpleAllocator<Node<CharType>>::get_instance();
 		AllocatorPtr<Node<CharType>> result = allocator.alloc();
-		new(allocator.get(result)) Node<CharType>; // TODO: overload new, maybe
+		new(allocator.get(result.to_int())) Node<CharType>; // TODO: overload new, maybe
 		return result;
 	}
 
@@ -294,7 +306,7 @@ public:
 	{
 		SimpleAllocator<Edge<CharType>>& allocator = SimpleAllocator<Edge<CharType>>::get_instance();
 		AllocatorPtr<Edge<CharType>> result = allocator.alloc();
-		new(allocator.get(result))Edge<CharType>(exit_node, type); // TODO
+		new(allocator.get(result.to_int()))Edge<CharType>(exit_node, type); // TODO
 		return result;
 	}
 
@@ -320,7 +332,9 @@ public:
 
 	AllocatorPtr<Node<CharType>> get_exit_node() const
 	{
-		return exit_node_ptr;
+		AllocatorPtr<Node<CharType>> result = exit_node_ptr;
+		assert(result.is_valid());
+		return result;
 	}
 
 	void set_exit_node(AllocatorPtr<Node<CharType>> node)
@@ -352,7 +366,7 @@ public:
 	{
 		SimpleAllocator<EdgeHashCollection<CharType>>& allocator = SimpleAllocator<EdgeHashCollection<CharType>>::get_instance();
 		AllocatorPtr<EdgeHashCollection<CharType>> result = allocator.alloc();
-		new(allocator.get(result)) EdgeHashCollection<CharType>; // TODO: overload new, maybe
+		new(allocator.get(result.to_int())) EdgeHashCollection<CharType>; // TODO: overload new, maybe
 		return result;
 	}
 
