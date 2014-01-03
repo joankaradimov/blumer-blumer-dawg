@@ -1,14 +1,12 @@
 #include <string>
 #include <cassert>
-#include <unordered_map>
 #include <fstream>
 
 template <typename T> class AllocatorPtr;
 template <typename T, int chunk_size = 8 * 1024 * 1024, int max_chunks = 32> class SimpleAllocator; // 5 + 23 = 28 bits for addressing
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
-template <typename CharType> class EdgeHashCollection;
-template <typename CharType> class EdgeIterator;
+template <typename CharType, int alphabet_size = 26> class FullEdgeMap;
 
 template <typename CharType> Node<CharType>* update(Node<CharType>* source, Node<CharType>* active_node, CharType letter);
 template <typename CharType> Node<CharType>* split(Node<CharType>* source, Node<CharType>* active_node, Node<CharType>* new_active_node);
@@ -142,7 +140,7 @@ public:
 
 	~Node()
 	{
-		if (edge_collection_type == EdgeCollectionType::edges_hash)
+		if (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
 			// TODO
 		}
@@ -154,9 +152,9 @@ public:
 		{
 			return outgoing_edge_label != 0;
 		}
-		else if (edge_collection_type == EdgeCollectionType::edges_hash)
+		else if (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
-			return ptr_as_edges_hash()->edges.size();
+			return ptr_as_full_edge_map()->size();
 		}
 		else
 		{
@@ -176,16 +174,16 @@ public:
 			}
 			else
 			{
-				edge_collection_type = EdgeCollectionType::edges_hash;
-				AllocatorPtr<EdgeHashCollection<CharType>> edges_ptr = EdgeHashCollection<CharType>::create();
+				edge_collection_type = EdgeCollectionType::full_edge_map;
+				AllocatorPtr<FullEdgeMap<CharType>> edges_ptr = FullEdgeMap<CharType>::create();
 				edges_ptr->add_edge(outgoing_edge_label, ptr, (EdgeType) outgoing_edge_type);
 				ptr = edges_ptr.to_int();
 				edges_ptr->add_edge(label, exit_node, type);
 			}
 		}
-		else if (edge_collection_type == EdgeCollectionType::edges_hash)
+		else if (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
-			ptr_as_edges_hash()->add_edge(label, exit_node, type);
+			ptr_as_full_edge_map()->add_edge(label, exit_node, type);
 		}
 	}
 
@@ -195,14 +193,16 @@ public:
 		{
 			this->add_edge(node->outgoing_edge_label, node->ptr, EdgeType::secondary);
 		}
-		else if (node->edge_collection_type == EdgeCollectionType::edges_hash)
+		else if (node->edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
-			AllocatorPtr<EdgeHashCollection<CharType>> edges = node->ptr_as_edges_hash();
-			for (std::pair<CharType, AllocatorPtr<Edge<CharType>>> pair : edges->edges) // TODO: fix this mess
+			AllocatorPtr<FullEdgeMap<CharType>> edges = node->ptr_as_full_edge_map();
+			for (int i = 1; i < 27; i++) // TODO: fix this
 			{
-				CharType label = pair.first;
-				AllocatorPtr<Edge<CharType>> edge = pair.second;
-				this->add_edge(label, edge->get_exit_node(), EdgeType::secondary);
+				const Edge<CharType> edge = edges->get_edge(i);
+				if (edge.is_present())
+				{
+					this->add_edge(i, edge.get_exit_node(), EdgeType::secondary);
+				}
 			}
 		}
 	}
@@ -215,12 +215,10 @@ public:
 			outgoing_edge_type = edge_type;
 			ptr = exit_node.to_int();
 		}
-		else if (edge_collection_type == EdgeCollectionType::edges_hash)
+		else if (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
-			AllocatorPtr<EdgeHashCollection<CharType>> edges = ptr_as_edges_hash();
-			AllocatorPtr<Edge<CharType>> edge = edges->get_edge(label);
-			edge->set_type(edge_type);
-			edge->set_exit_node(exit_node);
+			AllocatorPtr<FullEdgeMap<CharType>> edges = ptr_as_full_edge_map();
+			edges->set_edge_props(label, exit_node, edge_type);
 		}
 		else
 		{
@@ -244,18 +242,10 @@ public:
 				return Edge<CharType>::non_existant();
 			}
 		}
-		else if (edge_collection_type == EdgeCollectionType::edges_hash)
+		else if (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
-			AllocatorPtr<EdgeHashCollection<CharType>> edges = ptr_as_edges_hash();
-			AllocatorPtr<Edge<CharType>> edge = edges->get_edge(letter);
-			if (edge.not_null())
-			{
-				return *edge;
-			}
-			else
-			{
-				return Edge<CharType>::non_existant();
-			}
+			AllocatorPtr<FullEdgeMap<CharType>> edges = ptr_as_full_edge_map();
+			return edges->get_edge(letter);
 		}
 		else
 		{
@@ -279,16 +269,16 @@ public:
 		return ptr;
 	}
 
-	AllocatorPtr<EdgeHashCollection<CharType>> ptr_as_edges_hash()
+	AllocatorPtr<FullEdgeMap<CharType>> ptr_as_full_edge_map()
 	{
-		assert(edge_collection_type == EdgeCollectionType::edges_hash);
+		assert(edge_collection_type == EdgeCollectionType::full_edge_map);
 		return ptr;
 	}
 private:
 	enum EdgeCollectionType
 	{
 		single_node,
-		edges_hash,
+		full_edge_map,
 	};
 
 	unsigned long long suffix : 28;
@@ -302,14 +292,6 @@ template <typename CharType>
 class Edge
 {
 public:
-	static AllocatorPtr<Edge<CharType>> create(AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
-	{
-		SimpleAllocator<Edge<CharType>>& allocator = SimpleAllocator<Edge<CharType>>::get_instance();
-		AllocatorPtr<Edge<CharType>> result = allocator.alloc();
-		new(allocator.get(result.to_int()))Edge<CharType>(exit_node, type); // TODO
-		return result;
-	}
-
 	Edge()
 		:exists(false)
 	{
@@ -358,38 +340,52 @@ private:
 	unsigned int exit_node_ptr : 28;
 };
 
-template <typename CharType>
-class EdgeHashCollection
+template <typename CharType, int alphabet_size>
+class FullEdgeMap
 {
 public:
-	static AllocatorPtr<EdgeHashCollection<CharType>> create()
+	static AllocatorPtr<FullEdgeMap<CharType, alphabet_size>> create()
 	{
-		SimpleAllocator<EdgeHashCollection<CharType>>& allocator = SimpleAllocator<EdgeHashCollection<CharType>>::get_instance();
-		AllocatorPtr<EdgeHashCollection<CharType>> result = allocator.alloc();
-		new(allocator.get(result.to_int())) EdgeHashCollection<CharType>; // TODO: overload new, maybe
+		SimpleAllocator<FullEdgeMap<CharType, alphabet_size>>& allocator = SimpleAllocator<FullEdgeMap<CharType, alphabet_size>>::get_instance();
+		AllocatorPtr<FullEdgeMap<CharType, alphabet_size>> result = allocator.alloc();
+		new(allocator.get(result.to_int())) FullEdgeMap<CharType, alphabet_size>; // TODO: overload new, maybe
 		return result;
 	}
 
-	AllocatorPtr<Edge<CharType>> get_edge(CharType letter)
+	FullEdgeMap()
 	{
-		try
-		{
-			return edges.at(letter);
-		}
-		catch (std::out_of_range)
-		{
-			return NULL;
-		}
+	}
+
+	const Edge<CharType> get_edge(CharType letter)
+	{
+		return edges[letter - 1];
 	}
 
 	void add_edge(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		AllocatorPtr<Edge<CharType>> edge = Edge<CharType>::create(exit_node, type);
-		edges[letter] = edge;
+		assert(edges[letter - 1].is_present() == false);
+		Edge<CharType> new_edge(exit_node, type);
+		edges[letter - 1] = new_edge;
 	}
-	
-// private: TODO
-	std::unordered_map<CharType, AllocatorPtr<Edge<CharType>>> edges;
+
+	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
+	{
+		assert(edges[letter - 1].is_present());
+		Edge<CharType> new_edge(exit_node, type);
+		edges[letter - 1] = new_edge;
+	}
+
+	int size()
+	{
+		int result = 0;
+		for (int i = 0; i < alphabet_size; i++)
+		{
+			result += edges[i].is_present();
+		}
+		return result;
+	}
+private:
+	Edge<CharType> edges[alphabet_size];
 };
 
 template <typename CharType>
