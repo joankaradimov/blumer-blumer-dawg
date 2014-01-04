@@ -21,11 +21,8 @@ template <typename T>
 class AllocatorPtr
 {
 public:
-	AllocatorPtr() : AllocatorPtr(0) {} // TODO: get rid of this constructor
 	AllocatorPtr(int data) : data(data) {}
 
-	int operator/(int x) { return data / x; }
-	int operator%(int x) { return data % x; }
 	int operator==(const AllocatorPtr<T>& other) { return data == other.data; }
 	int operator!=(const AllocatorPtr<T>& other) { return data != other.data; }
 
