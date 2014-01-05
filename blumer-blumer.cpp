@@ -23,10 +23,17 @@ class AllocatorPtr
 public:
 	AllocatorPtr(int data) : data(data) {}
 
-	int operator==(const AllocatorPtr<T>& other) { return data == other.data; }
-	int operator!=(const AllocatorPtr<T>& other) { return data != other.data; }
+	int operator==(const AllocatorPtr<T> other) const
+	{
+		return data == other.data;
+	}
 
-	T* operator->()
+	int operator!=(const AllocatorPtr<T> other) const
+	{
+		return data != other.data;
+	}
+
+	T* operator->() const
 	{
 		assert(data);
 		return SimpleAllocator<T>::get_instance().get(data);
@@ -59,7 +66,7 @@ class SimpleAllocator
 public:
 	friend class NodeStatsBuilder;
 
-	AllocatorPtr<T> alloc()
+	const AllocatorPtr<T> alloc()
 	{
 		if (counter >= chunk_size)
 		{
@@ -69,12 +76,12 @@ public:
 			++chunk_counter;
 		}
 		T* top_chunk = memory_chunks[chunk_counter - 1];
-		AllocatorPtr<T> result = allocations_count();
+		const AllocatorPtr<T> result = allocations_count();
 		++counter;
 		return result;
 	}
 
-	T* get(int index)
+	T* get(int index) const
 	{
 		int chunk_index = index / chunk_size;
 		int inner_index = index % chunk_size;
@@ -108,7 +115,7 @@ private:
 		}
 	}
 
-	int allocations_count()
+	int allocations_count() const
 	{
 		int filled_chunk_count = chunk_counter - 1;
 		return filled_chunk_count * chunk_size + counter;
@@ -280,8 +287,7 @@ public:
 			{
 				AllocatorPtr<Node<CharType>> exit_node = ptr_as_node();
 				EdgeType type = (EdgeType) outgoing_edge_type;
-				const Edge<CharType> result(exit_node, type);
-				return result;
+				return Edge<CharType>(exit_node, type);
 			}
 			else
 			{
@@ -387,9 +393,9 @@ public:
 		return exists;
 	}
 
-	static Edge<CharType> non_existant()
+	static const Edge<CharType> non_existant()
 	{
-		static Edge non_existant_edge;
+		static const Edge<CharType> non_existant_edge;
 		return non_existant_edge;
 	}
 private:
@@ -509,15 +515,13 @@ public:
 	void add_edge(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
 		assert(edges[letter - 1].is_present() == false);
-		Edge<CharType> new_edge(exit_node, type);
-		edges[letter - 1] = new_edge;
+		edges[letter - 1] = Edge<CharType>(exit_node, type);
 	}
 
 	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
 		assert(edges[letter - 1].is_present());
-		Edge<CharType> new_edge(exit_node, type);
-		edges[letter - 1] = new_edge;
+		edges[letter - 1] = Edge<CharType>(exit_node, type);
 	}
 
 	int size()
@@ -536,7 +540,7 @@ private:
 template <typename CharType>
 AllocatorPtr<Node<CharType>> build_dawg(std::basic_string<CharType> word)
 {
-	AllocatorPtr<Node<CharType>> source = Node<CharType>::create();
+	const AllocatorPtr<Node<CharType>> source = Node<CharType>::create();
 	source->set_suffix(NULL);
 	AllocatorPtr<Node<CharType>> active_node = source;
 	for (CharType letter : word)
@@ -550,7 +554,7 @@ AllocatorPtr<Node<CharType>> build_dawg(std::basic_string<CharType> word)
 template <typename CharType>
 AllocatorPtr<Node<CharType>> update(AllocatorPtr<Node<CharType>> source, AllocatorPtr<Node<CharType>> active_node, CharType letter)
 {
-	AllocatorPtr<Node<CharType>> new_active_node = Node<CharType>::create();
+	const AllocatorPtr<Node<CharType>> new_active_node = Node<CharType>::create();
 	active_node->add_edge(letter, new_active_node, EdgeType::primary);
 	AllocatorPtr<Node<CharType>> current_node = active_node;
 	AllocatorPtr<Node<CharType>> suffix_node = NULL;
@@ -583,9 +587,9 @@ AllocatorPtr<Node<CharType>> update(AllocatorPtr<Node<CharType>> source, Allocat
 template <typename CharType>
 AllocatorPtr<Node<CharType>> split(AllocatorPtr<Node<CharType>> source, AllocatorPtr<Node<CharType>> parent_node, CharType label)
 {
-	AllocatorPtr<Node<CharType>> new_child_node = Node<CharType>::create();
+	const AllocatorPtr<Node<CharType>> new_child_node = Node<CharType>::create();
 	const Edge<CharType> outgoing_edge = parent_node->get_outgoing_edge(label);
-	AllocatorPtr<Node<CharType>> child_node = outgoing_edge.get_exit_node();
+	const AllocatorPtr<Node<CharType>> child_node = outgoing_edge.get_exit_node();
 
 	assert(outgoing_edge.get_type() == EdgeType::secondary);
 	parent_node->set_outgoing_edge_props(label, EdgeType::primary, new_child_node);
@@ -622,7 +626,7 @@ public:
 		{
 			counts[i] = 0;
 		}
-		SimpleAllocator<Node<char>>& allocator = SimpleAllocator<Node<char>>::get_instance();
+		const SimpleAllocator<Node<char>>& allocator = SimpleAllocator<Node<char>>::get_instance();
 		int allocations_count = allocator.allocations_count();
 		for (int i = 1; i < allocations_count; ++i)
 		{
