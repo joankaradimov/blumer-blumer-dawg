@@ -17,9 +17,13 @@ $(TARGET): $(TARGET).cpp
 
 clean:
 	$(RM) $(TARGET)
+	$(RM) generate-data
 
-example-data:
-	./generate-data.py 10000000 > example-data
+generate-data: generate-data.cpp
+	$(CC) -o generate-data generate-data.cpp
+
+example-data: generate-data
+	./generate-data 1337 10000000 > example-data
 
 clean-example-data:
 	$(RM) example-data
