@@ -6,6 +6,7 @@ template <typename T> class AllocatorPtr;
 template <typename T, int chunk_size = 8 * 1024 * 1024, int max_chunks = 32> class SimpleAllocator; // 5 + 23 = 28 bits for addressing
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
+template <typename CharType> class LabeledEdge;
 template <typename CharType, int max_list_size = 3> class PartialEdgeList;
 template <typename CharType, int alphabet_size = 26> class FullEdgeMap;
 
@@ -201,13 +202,9 @@ public:
 				AllocatorPtr<FullEdgeMap<CharType>> new_edges_ptr = FullEdgeMap<CharType>::create();
 				ptr = new_edges_ptr.to_int();
 				FullEdgeMap<CharType>& new_edges = *new_edges_ptr;
-				for (int i = 1; i < 27; i++) // TODO: fix this
+				for (const LabeledEdge<CharType> edge : edges)
 				{
-					const Edge<CharType> edge = edges.get_edge(i);
-					if (edge.is_present())
-					{
-						new_edges.add_edge(i, edge.get_exit_node(), edge.get_type());
-					}
+					new_edges.add_edge(edge.label, edge.exit_node_ptr, edge.type);
 				}
 				new_edges.add_edge(label, exit_node, type);
 			}
@@ -231,25 +228,17 @@ public:
 		else if (node.edge_collection_type == EdgeCollectionType::partial_edge_list)
 		{
 			const PartialEdgeList<CharType>& edges = node.ptr_to_partial_edge_list();
-			for (int i = 1; i < 27; i++) // TODO: fix this
+			for (const LabeledEdge<CharType> edge : edges)
 			{
-				const Edge<CharType> edge = edges.get_edge(i);
-				if (edge.is_present())
-				{
-					this->add_edge(i, edge.get_exit_node(), EdgeType::secondary);
-				}
+				this->add_edge(edge.label, edge.exit_node_ptr, EdgeType::secondary);
 			}
 		}
 		else if (node.edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
 			const FullEdgeMap<CharType>& edges = node.ptr_to_full_edge_map();
-			for (int i = 1; i < 27; i++) // TODO: fix this
+			for (const LabeledEdge<CharType> edge : edges)
 			{
-				const Edge<CharType> edge = edges.get_edge(i);
-				if (edge.is_present())
-				{
-					this->add_edge(i, edge.get_exit_node(), EdgeType::secondary);
-				}
+				this->add_edge(edge.label, edge.exit_node_ptr, EdgeType::secondary);
 			}
 		}
 	}
@@ -395,6 +384,20 @@ private:
 	unsigned int exit_node_ptr : 28;
 };
 
+template <typename CharType>
+class LabeledEdge
+{
+public:
+	LabeledEdge(Edge<CharType> edge, CharType label)
+		: exit_node_ptr(edge.get_exit_node()), type(edge.get_type()), label(label)
+	{
+	}
+
+	const AllocatorPtr<Node<CharType>> exit_node_ptr;
+	const EdgeType type;
+	const CharType label;
+};
+
 template <typename CharType, int max_list_size>
 class PartialEdgeList
 {
@@ -456,6 +459,45 @@ public:
 	bool is_full() const
 	{
 		return size() == max_list_size;
+	}
+
+	friend class Iterator;
+
+	class Iterator
+	{
+	public:
+		Iterator(const PartialEdgeList<CharType, max_list_size>* edges, int index) : edge_list(edges), index(index)
+		{
+		}
+
+		bool operator!=(const Iterator other) const
+		{
+			return (edge_list->edges + index) != (other.edge_list->edges + other.index);
+		}
+
+		const Iterator& operator++()
+		{
+			++index;
+			return *this;
+		}
+
+		const LabeledEdge<CharType> operator*() const
+		{
+			return LabeledEdge<CharType>(edge_list->edges[index], edge_list->label_data[index]);
+		}
+	private:
+		const PartialEdgeList<CharType, max_list_size>* edge_list;
+		int index;
+	};
+
+	Iterator begin() const
+	{
+		return Iterator(this, 0);
+	}
+
+	Iterator end() const
+	{
+		return Iterator(this, size());
 	}
 private:
 	int get_edge_index(CharType label) const
@@ -524,6 +566,47 @@ public:
 		}
 		return result;
 	}
+
+	class Iterator
+	{
+	public:
+		Iterator(const Edge<CharType>* edge, int index) : first_edge(edge), index(index)
+		{
+		}
+
+		bool operator!=(const Iterator other) const
+		{
+			return (first_edge + index) != (other.first_edge + other.index);
+		}
+
+		const Iterator& operator++()
+		{
+			do
+			{
+				++index;
+			} while (index < alphabet_size && !first_edge[index].is_present());
+			return *this;
+		}
+
+		const LabeledEdge<CharType> operator*() const
+		{
+			return LabeledEdge<CharType>(first_edge[index], index + 1);
+		}
+	private:
+		const Edge<CharType>* const first_edge;
+		int index;
+	};
+
+	Iterator begin() const
+	{
+		return Iterator(edges, 0);
+	}
+
+	Iterator end() const
+	{
+		return Iterator(edges, alphabet_size);
+	}
+
 private:
 	Edge<CharType> edges[alphabet_size];
 };
