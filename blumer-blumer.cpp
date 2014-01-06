@@ -21,6 +21,12 @@ class AllocatorPtr
 public:
 	AllocatorPtr(int data) : data(data) {}
 
+	void free()
+	{
+		assert(data);
+		return SimpleAllocator<T>::get_instance().free(data);
+	}
+
 	int operator==(const AllocatorPtr<T> other) const
 	{
 		return data == other.data;
@@ -66,6 +72,13 @@ public:
 
 	const AllocatorPtr<T> alloc()
 	{
+		if (free_list_head)
+		{
+			const AllocatorPtr<T> result = free_list_head;
+			T* chunk = get(free_list_head);
+			free_list_head = *((int*)chunk);
+			return result;
+		}
 		if (counter >= chunk_size)
 		{
 			assert(chunk_counter < max_chunks);
@@ -77,6 +90,13 @@ public:
 		const AllocatorPtr<T> result = allocations_count();
 		++counter;
 		return result;
+	}
+
+	void free(AllocatorPtr<T> ptr)
+	{
+		int* item = (int*) get(ptr.to_int());
+		*item = free_list_head;
+		free_list_head = ptr.to_int();
 	}
 
 	T* get(int index) const
@@ -100,7 +120,7 @@ public:
 		return instance;
 	}
 private:
-	SimpleAllocator() : counter(chunk_size), chunk_counter(0)
+	SimpleAllocator() : counter(chunk_size), chunk_counter(0), free_list_head(NULL)
 	{
 		alloc(); // create a NULL pointer for this allocator
 	}
@@ -109,7 +129,7 @@ private:
 	{
 		for (int i = 0; i < chunk_counter; i++)
 		{
-			free(memory_chunks[i]);
+			::free(memory_chunks[i]);
 		}
 	}
 
@@ -122,6 +142,7 @@ private:
 	int counter;
 	int chunk_counter;
 	T* memory_chunks[max_chunks];
+	int free_list_head;
 };
 
 template <typename CharType>
@@ -145,11 +166,15 @@ public:
 	{
 		if (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
-			// TODO
+			SimpleAllocator<FullEdgeMap<CharType>>& allocator = SimpleAllocator<FullEdgeMap<CharType>>::get_instance();
+			ptr_to_full_edge_map().~FullEdgeMap<CharType>();
+			allocator.free(ptr);
 		}
 		else if (edge_collection_type == EdgeCollectionType::partial_edge_list)
 		{
-			// TODO
+			SimpleAllocator<PartialEdgeList<CharType>>& allocator = SimpleAllocator<PartialEdgeList<CharType>>::get_instance();
+			ptr_to_partial_edge_list().~PartialEdgeList<CharType>();
+			allocator.free(ptr);
 		}
 	}
 
@@ -200,6 +225,7 @@ public:
 			{
 				edge_collection_type = EdgeCollectionType::full_edge_map;
 				AllocatorPtr<FullEdgeMap<CharType>> new_edges_ptr = FullEdgeMap<CharType>::create();
+				AllocatorPtr<PartialEdgeList<CharType>> old_ptr = ptr;
 				ptr = new_edges_ptr.to_int();
 				FullEdgeMap<CharType>& new_edges = *new_edges_ptr;
 				for (const LabeledEdge<CharType> edge : edges)
@@ -207,6 +233,7 @@ public:
 					new_edges.add_edge(edge.label, edge.exit_node_ptr, edge.type);
 				}
 				new_edges.add_edge(label, exit_node, type);
+				old_ptr.free();
 			}
 			else
 			{
@@ -219,7 +246,7 @@ public:
 		}
 	}
 
-	void add_secondary_edges(const Node<CharType> node)
+	void add_secondary_edges(const Node<CharType>& node)
 	{
 		if (node.edge_collection_type == EdgeCollectionType::single_node)
 		{
