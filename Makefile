@@ -10,20 +10,22 @@ DEFINES = -DNDEBUG
 # the build target executable:
 TARGET = blumer-blumer
 
+PROFILING = $(TARGET)-profiling $(TARGET).gcda
+
 all: $(TARGET)
 
-$(TARGET): $(TARGET).cpp $(TARGET).gcda
+.INTERMEDIATE: $(PROFILING)
+
+$(TARGET): $(TARGET).cpp $(PROFILING)
 	$(CC) -fprofile-use $(CFLAGS) $(DEFINES) -o $(TARGET) $(TARGET).cpp
 
-$(TARGET).gcda: $(TARGET).cpp example-data-10
+$(TARGET).gcda: $(TARGET)-profiling example-data-10
+	./$(TARGET)-profiling example-data-10 > /dev/null
+
+$(TARGET)-profiling: $(TARGET).cpp
 	$(CC) -fprofile-generate $(CFLAGS) $(DEFINES) -o $(TARGET)-profiling $(TARGET).cpp
-	./$(TARGET)-profiling example-data-10
 
-clean-pgo:
-	$(RM) $(TARGET).gcda
-	$(RM) $(TARGET)-profiling
-
-clean: clean-pgo
+clean:
 	$(RM) $(TARGET)
 	$(RM) generate-data
 
