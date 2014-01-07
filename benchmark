@@ -8,6 +8,6 @@ echo -e "\t"Executable size: `cat blumer-blumer | wc -c` > $OUT
 make example-data
 echo -e "\t"Example data size: `cat example-data | wc -c` >> $OUT
 
-/bin/time -v ./blumer-blumer example-data 2>&1 | egrep "User time|System time|Maximum resident set" >> $OUT
+/usr/bin/time -v ./blumer-blumer example-data 2>&1 | egrep "User time|System time|Maximum resident set" >> $OUT
 
 cat $OUT
