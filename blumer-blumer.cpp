@@ -86,7 +86,6 @@ public:
 			counter = 0;
 			++chunk_counter;
 		}
-		T* top_chunk = memory_chunks[chunk_counter - 1];
 		const AllocatorPtr<T> result = allocations_count();
 		++counter;
 		return result;
@@ -120,7 +119,7 @@ public:
 		return instance;
 	}
 private:
-	SimpleAllocator() : counter(chunk_size), chunk_counter(0), free_list_head(NULL)
+	SimpleAllocator() : counter(chunk_size), chunk_counter(0), free_list_head(0)
 	{
 		alloc(); // create a NULL pointer for this allocator
 	}
@@ -188,13 +187,9 @@ public:
 		{
 			return ptr_to_partial_edge_list().size();
 		}
-		else if (edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
 			return ptr_to_full_edge_map().size();
-		}
-		else
-		{
-			assert(false);
 		}
 	}
 
@@ -240,7 +235,7 @@ public:
 				edges.add_edge(label, exit_node, type);
 			}
 		}
-		else if (edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
 			ptr_to_full_edge_map().add_edge(label, exit_node, type);
 		}
@@ -260,7 +255,7 @@ public:
 				this->add_edge(edge.label, edge.exit_node_ptr, EdgeType::secondary);
 			}
 		}
-		else if (node.edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (node.edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
 			const FullEdgeMap<CharType>& edges = node.ptr_to_full_edge_map();
 			for (const LabeledEdge<CharType> edge : edges)
@@ -282,13 +277,9 @@ public:
 		{
 			ptr_to_partial_edge_list().set_edge_props(label, exit_node, edge_type);
 		}
-		else if (edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
 			ptr_to_full_edge_map().set_edge_props(label, exit_node, edge_type);
-		}
-		else
-		{
-			assert(false);
 		}
 	}
 
@@ -311,13 +302,9 @@ public:
 			PartialEdgeList<CharType>& edges = ptr_to_partial_edge_list();
 			return edges.get_edge(letter);
 		}
-		else if (edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
 			return ptr_to_full_edge_map().get_edge(letter);
-		}
-		else
-		{
-			assert(false);
 		}
 	}
 
@@ -643,7 +630,7 @@ AllocatorPtr<Node<CharType>> build_dawg(std::basic_string<CharType> word)
 {
 	const AllocatorPtr<Node<CharType>> source_ptr = Node<CharType>::create();
 	Node<CharType>& source = *source_ptr;
-	source.set_suffix(NULL);
+	source.set_suffix(0);
 	AllocatorPtr<Node<CharType>> active_node = source_ptr;
 	for (CharType letter : word)
 	{
@@ -660,9 +647,9 @@ AllocatorPtr<Node<CharType>> update(AllocatorPtr<Node<CharType>> source, Allocat
 	Node<CharType>& active_node = *active_node_ptr;
 	active_node.add_edge(letter, new_active_node, EdgeType::primary);
 	AllocatorPtr<Node<CharType>> current_node_ptr = active_node_ptr;
-	AllocatorPtr<Node<CharType>> suffix_node = NULL;
+	AllocatorPtr<Node<CharType>> suffix_node = 0;
 
-	while (current_node_ptr != source && suffix_node == NULL)
+	while (current_node_ptr != source && suffix_node == 0)
 	{
 		current_node_ptr = current_node_ptr->get_suffix();
 		Node<CharType>& current_node = *current_node_ptr;
@@ -680,7 +667,7 @@ AllocatorPtr<Node<CharType>> update(AllocatorPtr<Node<CharType>> source, Allocat
 			suffix_node = split(source, current_node_ptr, letter);
 		}
 	}
-	if (suffix_node == NULL)
+	if (suffix_node == 0)
 	{
 		suffix_node = source;
 	}
