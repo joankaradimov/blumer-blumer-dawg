@@ -302,7 +302,7 @@ public:
 
 	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		assert(letter == outgoing_edge_label);
+		assert(letter == this->outgoing_edge_label);
 		this->outgoing_edge_type = type;
 		this->ptr = exit_node.to_int();
 	}

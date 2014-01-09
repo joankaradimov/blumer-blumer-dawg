@@ -8,6 +8,7 @@ CFLAGS  = -g -Wall --std=c++11 -O3 -fipa-pta -Wl,-s
 DEFINES = -DNDEBUG
 
 # the build target executable:
+HEADERS = memory.hpp nodes.hpp dawg.hpp
 TARGET = blumer-blumer
 
 PROFILING = $(TARGET)-profiling $(TARGET).gcda
@@ -16,18 +17,19 @@ all: $(TARGET)
 
 .INTERMEDIATE: $(PROFILING)
 
-$(TARGET): $(TARGET).cpp $(PROFILING)
+$(TARGET): $(HEADERS) $(TARGET).cpp $(PROFILING)
 	$(CC) -fprofile-use $(CFLAGS) $(DEFINES) -o $(TARGET) $(TARGET).cpp
 
 $(TARGET).gcda: $(TARGET)-profiling example-data-10
 	./$(TARGET)-profiling example-data-10 > /dev/null
 
-$(TARGET)-profiling: $(TARGET).cpp
+$(TARGET)-profiling: $(HEADERS) $(TARGET).cpp
 	$(CC) -fprofile-generate $(CFLAGS) $(DEFINES) -o $(TARGET)-profiling $(TARGET).cpp
 
 clean:
 	$(RM) $(TARGET)
 	$(RM) generate-data
+	$(RM) $(PROFILING)
 
 generate-data: generate-data.cpp
 	$(CC) -o generate-data generate-data.cpp
