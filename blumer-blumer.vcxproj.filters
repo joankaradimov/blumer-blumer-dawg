@@ -3,4 +3,9 @@
   <ItemGroup>
     <ClCompile Include="blumer-blumer.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="memory.hpp" />
+    <ClInclude Include="nodes.hpp" />
+    <ClInclude Include="dawg.hpp" />
+  </ItemGroup>
 </Project>

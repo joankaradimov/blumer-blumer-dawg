@@ -141,6 +141,11 @@
   <ItemGroup>
     <ClCompile Include="blumer-blumer.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="dawg.hpp" />
+    <ClInclude Include="memory.hpp" />
+    <ClInclude Include="nodes.hpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
