@@ -3,7 +3,7 @@
 #include <fstream>
 
 template <typename T> class AllocatorPtr;
-template <typename T, int chunk_size = 8 * 1024 * 1024, int max_chunks = 32> class SimpleAllocator; // 5 + 23 = 28 bits for addressing
+template <typename T, int chunk_size = 8 * 1024 * 1024, int max_chunks = 32> class ChunkedAllocator; // 5 + 23 = 28 bits for addressing
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
 template <typename CharType> class LabeledEdge;
@@ -15,6 +15,8 @@ enum EdgeType
 	primary, secondary,
 };
 
+#define Allocator ChunkedAllocator
+
 template <typename T>
 class AllocatorPtr
 {
@@ -24,7 +26,7 @@ public:
 	void free()
 	{
 		assert(data);
-		return SimpleAllocator<T>::get_instance().free(data);
+		return Allocator<T>::get_instance().free(data);
 	}
 
 	int operator==(const AllocatorPtr<T> other) const
@@ -40,13 +42,13 @@ public:
 	T* operator->() const
 	{
 		assert(data);
-		return SimpleAllocator<T>::get_instance().get(data);
+		return Allocator<T>::get_instance().get(data);
 	}
 
 	T& operator*() const
 	{
 		assert(data);
-		return *SimpleAllocator<T>::get_instance().get(data);
+		return *Allocator<T>::get_instance().get(data);
 	}
 
 	bool not_null() { return data; }
@@ -58,14 +60,14 @@ public:
 
 	bool is_valid() const
 	{
-		return SimpleAllocator<T>::get_instance().is_valid(data);
+		return Allocator<T>::get_instance().is_valid(data);
 	}
 private:
 	int data;
 };
 
 template <typename T, int chunk_size, int max_chunks>
-class SimpleAllocator
+class ChunkedAllocator
 {
 public:
 	friend class NodeStatsBuilder;
@@ -113,18 +115,18 @@ public:
 		return chunk_index < chunk_counter && inner_index < counter;
 	}
 
-	static SimpleAllocator<T>& get_instance()
+	static ChunkedAllocator<T, chunk_size, max_chunks>& get_instance()
 	{
-		static SimpleAllocator<T> instance;
+		static ChunkedAllocator<T, chunk_size, max_chunks> instance;
 		return instance;
 	}
 private:
-	SimpleAllocator() : counter(chunk_size), chunk_counter(0), free_list_head(0)
+	ChunkedAllocator() : counter(chunk_size), chunk_counter(0), free_list_head(0)
 	{
 		alloc(); // create a NULL pointer for this allocator
 	}
 
-	~SimpleAllocator()
+	~ChunkedAllocator()
 	{
 		for (int i = 0; i < chunk_counter; i++)
 		{
@@ -150,7 +152,7 @@ class Node
 public:
 	static AllocatorPtr<Node<CharType>> create()
 	{
-		SimpleAllocator<Node<CharType>>& allocator = SimpleAllocator<Node<CharType>>::get_instance();
+		Allocator<Node<CharType>>& allocator = Allocator<Node<CharType>>::get_instance();
 		AllocatorPtr<Node<CharType>> result = allocator.alloc();
 		new(allocator.get(result.to_int())) Node<CharType>; // TODO: overload new, maybe
 		return result;
@@ -165,13 +167,13 @@ public:
 	{
 		if (edge_collection_type == EdgeCollectionType::full_edge_map)
 		{
-			SimpleAllocator<FullEdgeMap<CharType>>& allocator = SimpleAllocator<FullEdgeMap<CharType>>::get_instance();
+			Allocator<FullEdgeMap<CharType>>& allocator = Allocator<FullEdgeMap<CharType>>::get_instance();
 			ptr_to_full_edge_map().~FullEdgeMap<CharType>();
 			allocator.free(ptr);
 		}
 		else if (edge_collection_type == EdgeCollectionType::partial_edge_list)
 		{
-			SimpleAllocator<PartialEdgeList<CharType>>& allocator = SimpleAllocator<PartialEdgeList<CharType>>::get_instance();
+			Allocator<PartialEdgeList<CharType>>& allocator = Allocator<PartialEdgeList<CharType>>::get_instance();
 			ptr_to_partial_edge_list().~PartialEdgeList<CharType>();
 			allocator.free(ptr);
 		}
@@ -418,7 +420,7 @@ class PartialEdgeList
 public:
 	static AllocatorPtr<PartialEdgeList<CharType, max_list_size>> create()
 	{
-		SimpleAllocator<PartialEdgeList<CharType, max_list_size>>& allocator = SimpleAllocator<PartialEdgeList<CharType, max_list_size>>::get_instance();
+		Allocator<PartialEdgeList<CharType, max_list_size>>& allocator = Allocator<PartialEdgeList<CharType, max_list_size>>::get_instance();
 		AllocatorPtr<PartialEdgeList<CharType, max_list_size>> result = allocator.alloc();
 		new(allocator.get(result.to_int())) PartialEdgeList<CharType, max_list_size>; // TODO: overload new, maybe
 		return result;
@@ -544,7 +546,7 @@ class FullEdgeMap
 public:
 	static AllocatorPtr<FullEdgeMap<CharType, alphabet_size>> create()
 	{
-		SimpleAllocator<FullEdgeMap<CharType, alphabet_size>>& allocator = SimpleAllocator<FullEdgeMap<CharType, alphabet_size>>::get_instance();
+		Allocator<FullEdgeMap<CharType, alphabet_size>>& allocator = Allocator<FullEdgeMap<CharType, alphabet_size>>::get_instance();
 		AllocatorPtr<FullEdgeMap<CharType, alphabet_size>> result = allocator.alloc();
 		new(allocator.get(result.to_int())) FullEdgeMap<CharType, alphabet_size>; // TODO: overload new, maybe
 		return result;
@@ -721,7 +723,7 @@ public:
 		{
 			counts[i] = 0;
 		}
-		const SimpleAllocator<Node<char>>& allocator = SimpleAllocator<Node<char>>::get_instance();
+		const Allocator<Node<char>>& allocator = Allocator<Node<char>>::get_instance();
 		int allocations_count = allocator.allocations_count();
 		for (int i = 1; i < allocations_count; ++i)
 		{
