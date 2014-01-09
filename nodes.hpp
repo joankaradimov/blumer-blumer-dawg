@@ -269,6 +269,7 @@ public:
 	LabeledEdge(Edge<CharType> edge, CharType label)
 		: exit_node_ptr(edge.get_exit_node()), type(edge.get_type()), label(label)
 	{
+		assert(edge.get_exit_node().is_valid());
 	}
 
 	const AllocatorPtr<Node<CharType>> exit_node_ptr;

@@ -100,7 +100,7 @@ public:
 	{
 		int chunk_index = index / chunk_size;
 		int inner_index = index % chunk_size;
-		return chunk_index < chunk_counter && inner_index < counter;
+		return chunk_index < chunk_counter && inner_index < counter && index <= allocations_count();
 	}
 
 	static ChunkedAllocator<T, chunk_size, max_chunks>& get_instance()
