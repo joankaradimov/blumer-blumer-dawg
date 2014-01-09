@@ -277,7 +277,7 @@ public:
 };
 
 template <typename CharType>
-class SingleEdgeCollection : protected Node<CharType>
+class SingleEdgeCollection : private Node<CharType>
 {
 public:
 	const Edge<CharType> get_edge(CharType letter) const
@@ -392,7 +392,8 @@ public:
 
 		bool operator!=(const Iterator other) const
 		{
-			return (edge_list->edges + index) != (other.edge_list->edges + other.index);
+			assert(edge_list == other.edge_list);
+			return index != other.index;
 		}
 
 		const Iterator& operator++()
@@ -490,13 +491,14 @@ public:
 	class Iterator
 	{
 	public:
-		Iterator(const Edge<CharType>* edge, int index) : first_edge(edge), index(index)
+		Iterator(const Edge<CharType>* edges, int index) : edges(edges), index(index)
 		{
 		}
 
 		bool operator!=(const Iterator other) const
 		{
-			return (first_edge + index) != (other.first_edge + other.index);
+			assert(edges == other.edges);
+			return index != other.index;
 		}
 
 		const Iterator& operator++()
@@ -504,22 +506,24 @@ public:
 			do
 			{
 				++index;
-			} while (index < alphabet_size && !first_edge[index].is_present());
+			} while (index < alphabet_size && !edges[index].is_present());
 			return *this;
 		}
 
 		const LabeledEdge<CharType> operator*() const
 		{
-			return LabeledEdge<CharType>(first_edge[index], index + 1);
+			return LabeledEdge<CharType>(edges[index], index + 1);
 		}
 	private:
-		const Edge<CharType>* const first_edge;
+		const Edge<CharType>* const edges;
 		int index;
 	};
 
 	Iterator begin() const
 	{
-		return Iterator(edges, 0);
+		Iterator result(edges, -1);
+		++result;
+		return result;
 	}
 
 	Iterator end() const
