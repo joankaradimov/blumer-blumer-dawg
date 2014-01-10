@@ -2,20 +2,20 @@
 
 #include "memory.hpp"
 
-template <typename CharType> class Node;
+template <typename CharType, int alphabet_size = 26> class Node;
 template <typename CharType> class Edge;
 template <typename CharType> class LabeledEdge;
 template <typename CharType> class EmptyEdgeCollection;
 template <typename CharType> class SingleEdgeCollection;
 template <typename CharType, int max_list_size = 3> class PartialEdgeList;
-template <typename CharType, int alphabet_size = 26> class FullEdgeMap;
+template <typename CharType, int alphabet_size> class FullEdgeMap;
 
 enum EdgeType
 {
 	primary, secondary,
 };
 
-template <typename CharType>
+template <typename CharType, int alphabet_size>
 class Node
 {
 public:
@@ -35,13 +35,13 @@ public:
 	{
 		if (is_of_type(EdgeCollectionType::full_edge_map))
 		{
-			Allocator<FullEdgeMap<CharType>>& allocator = Allocator<FullEdgeMap<CharType>>::get_instance();
-			ptr_to_full_edge_map().~FullEdgeMap<CharType>();
+			Allocator<FullEdgeMap<CharType, alphabet_size>>& allocator = Allocator<FullEdgeMap<CharType, alphabet_size>>::get_instance();
+			ptr_to_full_edge_map().~FullEdgeMap<CharType, alphabet_size>();
 			allocator.free(ptr);
 		}
 		else if (is_of_type(EdgeCollectionType::partial_edge_list))
 		{
-			Allocator<PartialEdgeList<CharType>>& allocator = Allocator<PartialEdgeList<CharType>>::get_instance();
+			Allocator<PartialEdgeList<CharType, alphabet_size>>& allocator = Allocator<PartialEdgeList<CharType>>::get_instance();
 			ptr_to_partial_edge_list().~PartialEdgeList<CharType>();
 			allocator.free(ptr);
 		}
@@ -89,10 +89,10 @@ public:
 			if (edges.is_full())
 			{
 				set_edge_collection_type(EdgeCollectionType::full_edge_map);
-				AllocatorPtr<FullEdgeMap<CharType>> new_edges_ptr = FullEdgeMap<CharType>::create();
+				AllocatorPtr<FullEdgeMap<CharType, alphabet_size>> new_edges_ptr = FullEdgeMap<CharType, alphabet_size>::create();
 				AllocatorPtr<PartialEdgeList<CharType>> old_ptr = ptr;
 				ptr = new_edges_ptr.to_int();
-				FullEdgeMap<CharType>& new_edges = *new_edges_ptr;
+				FullEdgeMap<CharType, alphabet_size>& new_edges = *new_edges_ptr;
 				for (const LabeledEdge<CharType> edge : edges)
 				{
 					new_edges.add_edge(edge.label, edge.exit_node_ptr, edge.type);
@@ -131,7 +131,7 @@ public:
 		}
 		else // (node.is_of_type(EdgeCollectionType::full_edge_map))
 		{
-			const FullEdgeMap<CharType>& edges = node.ptr_to_full_edge_map();
+			const FullEdgeMap<CharType, alphabet_size>& edges = node.ptr_to_full_edge_map();
 			for (const LabeledEdge<CharType> edge : edges)
 			{
 				this->add_edge(edge.label, edge.exit_node_ptr, EdgeType::secondary);
@@ -208,17 +208,17 @@ public:
 		return *result_ptr;
 	}
 
-	FullEdgeMap<CharType>& ptr_to_full_edge_map() const
+	FullEdgeMap<CharType, alphabet_size>& ptr_to_full_edge_map() const
 	{
 		assert(is_of_type(EdgeCollectionType::full_edge_map));
-		AllocatorPtr<FullEdgeMap<CharType>> result_ptr = ptr;
+		AllocatorPtr<FullEdgeMap<CharType, alphabet_size>> result_ptr = ptr;
 		return *result_ptr;
 	}
 protected:
 	enum EdgeCollectionType
 	{
 		empty_edge_collection,
-		single_node = 26, // TODO
+		single_node = alphabet_size,
 		partial_edge_list,
 		full_edge_map,
 	};
@@ -228,7 +228,7 @@ protected:
 		switch (type)
 		{
 		case EdgeCollectionType::single_node:
-			return ptr_type > 0 && ptr_type <= 26; // TODO
+			return ptr_type > 0 && ptr_type <= alphabet_size;
 		default:
 			return ptr_type == type;
 		}
