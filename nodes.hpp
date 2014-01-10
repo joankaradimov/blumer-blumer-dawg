@@ -27,20 +27,19 @@ public:
 		return result;
 	}
 
-	Node()
-		: edge_collection_type(EdgeCollectionType::empty_edge_collection), outgoing_edge_label(0)
+	Node() : ptr_type(0)
 	{
 	}
 
 	~Node()
 	{
-		if (edge_collection_type == EdgeCollectionType::full_edge_map)
+		if (is_of_type(EdgeCollectionType::full_edge_map))
 		{
 			Allocator<FullEdgeMap<CharType>>& allocator = Allocator<FullEdgeMap<CharType>>::get_instance();
 			ptr_to_full_edge_map().~FullEdgeMap<CharType>();
 			allocator.free(ptr);
 		}
-		else if (edge_collection_type == EdgeCollectionType::partial_edge_list)
+		else if (is_of_type(EdgeCollectionType::partial_edge_list))
 		{
 			Allocator<PartialEdgeList<CharType>>& allocator = Allocator<PartialEdgeList<CharType>>::get_instance();
 			ptr_to_partial_edge_list().~PartialEdgeList<CharType>();
@@ -50,19 +49,19 @@ public:
 
 	int get_edge_count()
 	{
-		if (edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		if (is_of_type(EdgeCollectionType::empty_edge_collection))
 		{
 			return ptr_to_empty_edge_collection().size();
 		}
-		else if (edge_collection_type == EdgeCollectionType::single_node)
+		else if (is_of_type(EdgeCollectionType::single_node))
 		{
 			return ptr_to_single_edge_collection().size();
 		}
-		else if (edge_collection_type == EdgeCollectionType::partial_edge_list)
+		else if (is_of_type(EdgeCollectionType::partial_edge_list))
 		{
 			return ptr_to_partial_edge_list().size();
 		}
-		else // (edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (is_of_type(EdgeCollectionType::full_edge_map))
 		{
 			return ptr_to_full_edge_map().size();
 		}
@@ -70,26 +69,26 @@ public:
 
 	void add_edge(CharType label, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		if (edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		if (is_of_type(EdgeCollectionType::empty_edge_collection))
 		{
 			ptr_to_empty_edge_collection().add_edge(label, exit_node, type);
-			edge_collection_type = EdgeCollectionType::single_node;
+			assert(is_of_type(EdgeCollectionType::single_node));
 		}
-		else if (edge_collection_type == EdgeCollectionType::single_node)
+		else if (is_of_type(EdgeCollectionType::single_node))
 		{
-			edge_collection_type = EdgeCollectionType::partial_edge_list;
 			AllocatorPtr<PartialEdgeList<CharType>> new_edges_ptr = PartialEdgeList<CharType>::create();
 			PartialEdgeList<CharType>& new_edges = *new_edges_ptr;
-			new_edges.add_edge(outgoing_edge_label, ptr, (EdgeType)outgoing_edge_type);
+			new_edges.add_edge(ptr_type, ptr, (EdgeType)outgoing_edge_type);
+			set_edge_collection_type(EdgeCollectionType::partial_edge_list);
 			ptr = new_edges_ptr.to_int();
 			new_edges.add_edge(label, exit_node, type);
 		}
-		else if (edge_collection_type == EdgeCollectionType::partial_edge_list)
+		else if (is_of_type(EdgeCollectionType::partial_edge_list))
 		{
 			PartialEdgeList<CharType>& edges = ptr_to_partial_edge_list();
 			if (edges.is_full())
 			{
-				edge_collection_type = EdgeCollectionType::full_edge_map;
+				set_edge_collection_type(EdgeCollectionType::full_edge_map);
 				AllocatorPtr<FullEdgeMap<CharType>> new_edges_ptr = FullEdgeMap<CharType>::create();
 				AllocatorPtr<PartialEdgeList<CharType>> old_ptr = ptr;
 				ptr = new_edges_ptr.to_int();
@@ -106,7 +105,7 @@ public:
 				edges.add_edge(label, exit_node, type);
 			}
 		}
-		else // (edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (is_of_type(EdgeCollectionType::full_edge_map))
 		{
 			ptr_to_full_edge_map().add_edge(label, exit_node, type);
 		}
@@ -114,15 +113,15 @@ public:
 
 	void add_secondary_edges(const Node<CharType>& node)
 	{
-		if (node.edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		if (node.is_of_type(EdgeCollectionType::empty_edge_collection))
 		{
 			// Do nothing
 		}
-		else if (node.edge_collection_type == EdgeCollectionType::single_node)
+		else if (node.is_of_type(EdgeCollectionType::single_node))
 		{
-			this->add_edge(node.outgoing_edge_label, node.ptr, EdgeType::secondary);
+			this->add_edge(node.ptr_type, node.ptr, EdgeType::secondary);
 		}
-		else if (node.edge_collection_type == EdgeCollectionType::partial_edge_list)
+		else if (node.is_of_type(EdgeCollectionType::partial_edge_list))
 		{
 			const PartialEdgeList<CharType>& edges = node.ptr_to_partial_edge_list();
 			for (const LabeledEdge<CharType> edge : edges)
@@ -130,7 +129,7 @@ public:
 				this->add_edge(edge.label, edge.exit_node_ptr, EdgeType::secondary);
 			}
 		}
-		else // (node.edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (node.is_of_type(EdgeCollectionType::full_edge_map))
 		{
 			const FullEdgeMap<CharType>& edges = node.ptr_to_full_edge_map();
 			for (const LabeledEdge<CharType> edge : edges)
@@ -142,19 +141,19 @@ public:
 
 	void set_outgoing_edge_props(CharType label, EdgeType edge_type, AllocatorPtr<Node<CharType>> exit_node)
 	{
-		if (edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		if (is_of_type(EdgeCollectionType::empty_edge_collection))
 		{
 			ptr_to_empty_edge_collection().set_edge_props(label, exit_node, edge_type);
 		}
-		else if (edge_collection_type == EdgeCollectionType::single_node)
+		else if (is_of_type(EdgeCollectionType::single_node))
 		{
 			ptr_to_single_edge_collection().set_edge_props(label, exit_node, edge_type);
 		}
-		else if (edge_collection_type == EdgeCollectionType::partial_edge_list)
+		else if (is_of_type(EdgeCollectionType::partial_edge_list))
 		{
 			ptr_to_partial_edge_list().set_edge_props(label, exit_node, edge_type);
 		}
-		else // (edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (is_of_type(EdgeCollectionType::full_edge_map))
 		{
 			ptr_to_full_edge_map().set_edge_props(label, exit_node, edge_type);
 		}
@@ -162,19 +161,19 @@ public:
 
 	const Edge<CharType> get_outgoing_edge(CharType letter)
 	{
-		if (edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		if (is_of_type(EdgeCollectionType::empty_edge_collection))
 		{
 			return ptr_to_empty_edge_collection().get_edge(letter);
 		}
-		else if (edge_collection_type == EdgeCollectionType::single_node)
+		else if (is_of_type(EdgeCollectionType::single_node))
 		{
 			return ptr_to_single_edge_collection().get_edge(letter);
 		}
-		else if (edge_collection_type == EdgeCollectionType::partial_edge_list)
+		else if (is_of_type(EdgeCollectionType::partial_edge_list))
 		{
 			return ptr_to_partial_edge_list().get_edge(letter);
 		}
-		else // (edge_collection_type == EdgeCollectionType::full_edge_map)
+		else // (is_of_type(EdgeCollectionType::full_edge_map))
 		{
 			return ptr_to_full_edge_map().get_edge(letter);
 		}
@@ -192,26 +191,26 @@ public:
 
 	EmptyEdgeCollection<CharType>& ptr_to_empty_edge_collection()
 	{
-		assert(edge_collection_type == EdgeCollectionType::empty_edge_collection);
+		assert(is_of_type(EdgeCollectionType::empty_edge_collection));
 		return *reinterpret_cast<EmptyEdgeCollection<CharType>*>(this);
 	}
 
 	SingleEdgeCollection<CharType>& ptr_to_single_edge_collection()
 	{
-		assert(edge_collection_type == EdgeCollectionType::single_node);
+		assert(is_of_type(EdgeCollectionType::single_node));
 		return *reinterpret_cast<SingleEdgeCollection<CharType>*>(this);
 	}
 
 	PartialEdgeList<CharType>& ptr_to_partial_edge_list() const
 	{
-		assert(edge_collection_type == EdgeCollectionType::partial_edge_list);
+		assert(is_of_type(EdgeCollectionType::partial_edge_list));
 		AllocatorPtr<PartialEdgeList<CharType>> result_ptr = ptr;
 		return *result_ptr;
 	}
 
 	FullEdgeMap<CharType>& ptr_to_full_edge_map() const
 	{
-		assert(edge_collection_type == EdgeCollectionType::full_edge_map);
+		assert(is_of_type(EdgeCollectionType::full_edge_map));
 		AllocatorPtr<FullEdgeMap<CharType>> result_ptr = ptr;
 		return *result_ptr;
 	}
@@ -219,14 +218,29 @@ protected:
 	enum EdgeCollectionType
 	{
 		empty_edge_collection,
-		single_node,
+		single_node = 26, // TODO
 		partial_edge_list,
 		full_edge_map,
 	};
 
+	bool is_of_type(EdgeCollectionType type) const
+	{
+		switch (type)
+		{
+		case EdgeCollectionType::single_node:
+			return ptr_type > 0 && ptr_type <= 26; // TODO
+		default:
+			return ptr_type == type;
+		}
+	}
+
+	void set_edge_collection_type(EdgeCollectionType type)
+	{
+		ptr_type = type;
+	}
+
 	unsigned long long suffix : 28;
-	unsigned long long edge_collection_type : 2;
-	unsigned long long outgoing_edge_label : 5;
+	unsigned long long ptr_type : 5;
 	unsigned long long outgoing_edge_type : 1;
 	unsigned long long ptr : 28;
 };
@@ -309,7 +323,7 @@ public:
 
 	void add_edge(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		this->outgoing_edge_label = letter;
+		this->ptr_type = letter;
 		this->ptr = exit_node.to_int();
 		this->outgoing_edge_type = type;
 	}
@@ -336,7 +350,7 @@ class SingleEdgeCollection : private Node<CharType>
 public:
 	const Edge<CharType> get_edge(CharType letter) const
 	{
-		if (this->outgoing_edge_label == letter)
+		if (this->ptr_type == letter)
 		{
 			EdgeType type = (EdgeType)this->outgoing_edge_type;
 			return Edge<CharType>(this->ptr, type);
@@ -354,7 +368,7 @@ public:
 
 	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		assert(letter == outgoing_edge_label);
+		assert(this->ptr_type == letter);
 		this->outgoing_edge_type = type;
 		this->ptr = exit_node.to_int();
 	}
