@@ -239,10 +239,10 @@ protected:
 		ptr_type = type;
 	}
 
-	unsigned long long suffix : 28;
+	unsigned long long suffix : 29;
 	unsigned long long ptr_type : 5;
 	unsigned long long outgoing_edge_type : 1;
-	unsigned long long ptr : 28;
+	unsigned long long ptr : 29;
 };
 
 template <typename CharType>
@@ -294,7 +294,7 @@ public:
 private:
 	unsigned int exists : 1;
 	unsigned int type : 1;
-	unsigned int exit_node_ptr : 28;
+	unsigned int exit_node_ptr : 29;
 };
 
 template <typename CharType>

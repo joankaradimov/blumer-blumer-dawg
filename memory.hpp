@@ -1,7 +1,7 @@
 #pragma once
 
 template <typename T> class AllocatorPtr;
-template <typename T, int chunk_size = 8 * 1024 * 1024, int max_chunks = 32> class ChunkedAllocator; // 5 + 23 = 28 bits for addressing
+template <typename T, int chunk_size = 8 * 1024 * 1024, int max_chunks = 64> class ChunkedAllocator; // 6 + 23 = 29 bits for addressing
 
 #define Allocator ChunkedAllocator
 
