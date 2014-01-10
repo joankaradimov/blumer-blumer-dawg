@@ -5,6 +5,7 @@
 template <typename CharType> class Node;
 template <typename CharType> class Edge;
 template <typename CharType> class LabeledEdge;
+template <typename CharType> class EmptyEdgeCollection;
 template <typename CharType> class SingleEdgeCollection;
 template <typename CharType, int max_list_size = 3> class PartialEdgeList;
 template <typename CharType, int alphabet_size = 26> class FullEdgeMap;
@@ -27,7 +28,7 @@ public:
 	}
 
 	Node()
-		: edge_collection_type(EdgeCollectionType::single_node), outgoing_edge_label(0)
+		: edge_collection_type(EdgeCollectionType::empty_edge_collection), outgoing_edge_label(0)
 	{
 	}
 
@@ -49,7 +50,11 @@ public:
 
 	int get_edge_count()
 	{
-		if (edge_collection_type == EdgeCollectionType::single_node)
+		if (edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		{
+			return ptr_to_empty_edge_collection().size();
+		}
+		else if (edge_collection_type == EdgeCollectionType::single_node)
 		{
 			return ptr_to_single_edge_collection().size();
 		}
@@ -65,22 +70,19 @@ public:
 
 	void add_edge(CharType label, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		if (edge_collection_type == EdgeCollectionType::single_node)
+		if (edge_collection_type == EdgeCollectionType::empty_edge_collection)
 		{
-			SingleEdgeCollection<CharType>& edges = ptr_to_single_edge_collection();
-			if (edges.is_full())
-			{
-				edge_collection_type = EdgeCollectionType::partial_edge_list;
-				AllocatorPtr<PartialEdgeList<CharType>> new_edges_ptr = PartialEdgeList<CharType>::create();
-				PartialEdgeList<CharType>& new_edges = *new_edges_ptr;
-				new_edges.add_edge(outgoing_edge_label, ptr, (EdgeType)outgoing_edge_type);
-				ptr = new_edges_ptr.to_int();
-				new_edges.add_edge(label, exit_node, type);
-			}
-			else
-			{
-				edges.add_edge(label, exit_node, type);
-			}
+			ptr_to_empty_edge_collection().add_edge(label, exit_node, type);
+			edge_collection_type = EdgeCollectionType::single_node;
+		}
+		else if (edge_collection_type == EdgeCollectionType::single_node)
+		{
+			edge_collection_type = EdgeCollectionType::partial_edge_list;
+			AllocatorPtr<PartialEdgeList<CharType>> new_edges_ptr = PartialEdgeList<CharType>::create();
+			PartialEdgeList<CharType>& new_edges = *new_edges_ptr;
+			new_edges.add_edge(outgoing_edge_label, ptr, (EdgeType)outgoing_edge_type);
+			ptr = new_edges_ptr.to_int();
+			new_edges.add_edge(label, exit_node, type);
 		}
 		else if (edge_collection_type == EdgeCollectionType::partial_edge_list)
 		{
@@ -112,7 +114,11 @@ public:
 
 	void add_secondary_edges(const Node<CharType>& node)
 	{
-		if (node.edge_collection_type == EdgeCollectionType::single_node)
+		if (node.edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		{
+			// Do nothing
+		}
+		else if (node.edge_collection_type == EdgeCollectionType::single_node)
 		{
 			this->add_edge(node.outgoing_edge_label, node.ptr, EdgeType::secondary);
 		}
@@ -136,7 +142,11 @@ public:
 
 	void set_outgoing_edge_props(CharType label, EdgeType edge_type, AllocatorPtr<Node<CharType>> exit_node)
 	{
-		if (edge_collection_type == EdgeCollectionType::single_node)
+		if (edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		{
+			ptr_to_empty_edge_collection().set_edge_props(label, exit_node, edge_type);
+		}
+		else if (edge_collection_type == EdgeCollectionType::single_node)
 		{
 			ptr_to_single_edge_collection().set_edge_props(label, exit_node, edge_type);
 		}
@@ -152,7 +162,11 @@ public:
 
 	const Edge<CharType> get_outgoing_edge(CharType letter)
 	{
-		if (edge_collection_type == EdgeCollectionType::single_node)
+		if (edge_collection_type == EdgeCollectionType::empty_edge_collection)
+		{
+			return ptr_to_empty_edge_collection().get_edge(letter);
+		}
+		else if (edge_collection_type == EdgeCollectionType::single_node)
 		{
 			return ptr_to_single_edge_collection().get_edge(letter);
 		}
@@ -174,6 +188,12 @@ public:
 	AllocatorPtr<Node<CharType>> get_suffix()
 	{
 		return suffix;
+	}
+
+	EmptyEdgeCollection<CharType>& ptr_to_empty_edge_collection()
+	{
+		assert(edge_collection_type == EdgeCollectionType::empty_edge_collection);
+		return *reinterpret_cast<EmptyEdgeCollection<CharType>*>(this);
 	}
 
 	SingleEdgeCollection<CharType>& ptr_to_single_edge_collection()
@@ -198,6 +218,7 @@ public:
 protected:
 	enum EdgeCollectionType
 	{
+		empty_edge_collection,
 		single_node,
 		partial_edge_list,
 		full_edge_map,
@@ -278,6 +299,38 @@ public:
 };
 
 template <typename CharType>
+class EmptyEdgeCollection : private Node<CharType>
+{
+public:
+	const Edge<CharType> get_edge(CharType letter) const
+	{
+		return Edge<CharType>::non_existant();
+	}
+
+	void add_edge(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
+	{
+		this->outgoing_edge_label = letter;
+		this->ptr = exit_node.to_int();
+		this->outgoing_edge_type = type;
+	}
+
+	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
+	{
+		assert(false);
+	}
+
+	int size() const
+	{
+		return 0;
+	}
+
+	bool is_full() const
+	{
+		return false;
+	}
+};
+
+template <typename CharType>
 class SingleEdgeCollection : private Node<CharType>
 {
 public:
@@ -296,26 +349,24 @@ public:
 
 	void add_edge(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		this->outgoing_edge_label = letter;
-		this->ptr = exit_node.to_int();
-		this->outgoing_edge_type = type;
+		assert(false);
 	}
 
 	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
-		assert(letter == this->outgoing_edge_label);
+		assert(letter == outgoing_edge_label);
 		this->outgoing_edge_type = type;
 		this->ptr = exit_node.to_int();
 	}
 
 	int size() const
 	{
-		return this->outgoing_edge_label != 0;
+		return 1;
 	}
 
 	bool is_full() const
 	{
-		return this->outgoing_edge_label != 0;
+		return true;
 	}
 };
 
