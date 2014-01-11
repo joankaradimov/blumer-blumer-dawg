@@ -7,14 +7,14 @@ template <typename CharType>
 class Dawg
 {
 public:
-	Dawg(std::basic_string<CharType> word) : source_ptr(Node<CharType>::create())
+	Dawg(const char* const word) : source_ptr(Node<CharType>::create())
 	{
 		Node<CharType>& source = *source_ptr;
 		source.set_suffix(0);
 		AllocatorPtr<Node<CharType>> active_node = source_ptr;
-		for (CharType letter : word)
+		for (int i = 0; word[i]; i++)
 		{
-			letter &= 0x1f; // TODO: a nicer solution to this
+			CharType letter = 0x1f & word[i]; // TODO: a nicer solution to this
 			active_node = update(active_node, letter);
 		}
 	}

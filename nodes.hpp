@@ -1,5 +1,6 @@
 #pragma once
 
+#include <new>
 #include "memory.hpp"
 
 template <typename CharType, int alphabet_size = 26> class Node;
