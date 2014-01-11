@@ -1,5 +1,6 @@
 #include <string>
 #include <cassert>
+#include <cstring>
 #include <fstream>
 
 #include "memory.hpp"
@@ -48,9 +49,13 @@ int main(int argc, char* argv[])
 	std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
 	Dawg<char> dawg(content);
 
-	NodeStatsBuilder stats;
-	stats.build();
-	stats.print();
+	char* verbose_arg = argv[2];
+	if (argc > 2 && strcmp(verbose_arg, "-r") == 0)
+	{
+		NodeStatsBuilder stats;
+		stats.build();
+		stats.print();
+	}
 
 	return 0;
 }
