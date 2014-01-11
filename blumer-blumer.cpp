@@ -18,13 +18,21 @@ public:
 		{
 			counts[i] = 0;
 		}
+
 		const Allocator<Node<char>>& allocator = Allocator<Node<char>>::get_instance();
-		int allocations_count = allocator.allocations_count();
+		int allocations_count = allocator.get_allocations_count();
 		for (int i = 1; i < allocations_count; ++i)
 		{
 			Node<char>* ptr = allocator.get(i);
 			int count = ptr->get_edge_count();
 			counts[count] += 1;
+		}
+
+		assert(counts[0] == 1);
+		branched_nodes = 0;
+		for (int i = 2; i < 27; ++i)
+		{
+			branched_nodes += counts[i];
 		}
 	}
 
@@ -34,10 +42,12 @@ public:
 		{
 			printf("%d: %d\n", i, counts[i]);
 		}
+		printf("%d\n", branched_nodes + 1);
 	}
 
 private:
 	int counts[27];
+	int branched_nodes;
 };
 
 int main(int argc, char* argv[])
@@ -56,6 +66,11 @@ int main(int argc, char* argv[])
 		stats.build();
 		stats.print();
 	}
+
+	int allocations = 1 +
+		Allocator<PartialEdgeList<char>>::get_instance().get_allocations_count() - 1 +
+		Allocator<FullEdgeMap<char, 26>>::get_instance().get_allocations_count() - 1;
+	printf("%d\n", allocations);
 
 	return 0;
 }

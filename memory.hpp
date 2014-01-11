@@ -67,22 +67,23 @@ public:
 			const AllocatorPtr<T> result = free_list_head;
 			T* chunk = get(free_list_head);
 			free_list_head = *((int*)chunk);
+			++allocations_count;
 			return result;
 		}
-		if (counter >= chunk_size)
+		if (allocations_count % chunk_size == 0)
 		{
 			assert(chunk_counter < max_chunks);
 			memory_chunks[chunk_counter] = (T*)malloc(chunk_size * sizeof(T));
-			counter = 0;
 			++chunk_counter;
 		}
-		const AllocatorPtr<T> result = allocations_count();
-		++counter;
+		const AllocatorPtr<T> result = allocations_count;
+		++allocations_count;
 		return result;
 	}
 
 	void free(AllocatorPtr<T> ptr)
 	{
+		--allocations_count;
 		int* item = (int*)get(ptr.to_int());
 		*item = free_list_head;
 		free_list_head = ptr.to_int();
@@ -100,7 +101,7 @@ public:
 	{
 		int chunk_index = index / chunk_size;
 		int inner_index = index % chunk_size;
-		return chunk_index < chunk_counter && inner_index < counter && index <= allocations_count();
+		return chunk_index < chunk_counter && index <= allocations_count;
 	}
 
 	static ChunkedAllocator<T, chunk_size, max_chunks>& get_instance()
@@ -108,8 +109,14 @@ public:
 		static ChunkedAllocator<T, chunk_size, max_chunks> instance;
 		return instance;
 	}
+
+	int get_allocations_count() const
+	{
+		return allocations_count;
+	}
 private:
-	ChunkedAllocator() : counter(chunk_size), chunk_counter(0), free_list_head(0)
+	ChunkedAllocator()
+		: chunk_counter(0), free_list_head(0), allocations_count(0)
 	{
 		alloc(); // create a NULL pointer for this allocator
 	}
@@ -122,14 +129,8 @@ private:
 		}
 	}
 
-	int allocations_count() const
-	{
-		int filled_chunk_count = chunk_counter - 1;
-		return filled_chunk_count * chunk_size + counter;
-	}
-
-	int counter;
 	int chunk_counter;
-	T* memory_chunks[max_chunks];
 	int free_list_head;
+	int allocations_count;
+	T* memory_chunks[max_chunks];
 };
