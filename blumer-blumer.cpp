@@ -10,8 +10,6 @@
 class NodeStatsBuilder
 {
 public:
-	typedef Node<char> NodeT;
-
 	void build()
 	{
 		for (int i = 0; i < 27; ++i)
@@ -28,12 +26,13 @@ public:
 			counts[count] += 1;
 		}
 
-		assert(counts[0] == 1);
 		branched_nodes = 0;
 		for (int i = 2; i < 27; ++i)
 		{
 			branched_nodes += counts[i];
 		}
+
+		assert(counts[0] == 1);
 	}
 
 	void print()
@@ -89,14 +88,12 @@ char* read_input(const char* const filename)
 
 int main(int argc, char* argv[])
 {
-	// TODO: count the final state too (it has 0 children; 0 != 1)
-
-	char* input_filename = argv[1];
+	const char* input_filename = argv[1];
 	char* const content = read_input(input_filename);
 	Dawg<char> dawg(content);
 	free(content);
 
-	char* verbose_arg = argv[2];
+	const char* verbose_arg = argv[2];
 	if (argc > 2 && strcmp(verbose_arg, "-r") == 0)
 	{
 		NodeStatsBuilder stats;
@@ -104,9 +101,9 @@ int main(int argc, char* argv[])
 		stats.print();
 	}
 
-	int allocations = 1 +
-		Allocator<PartialEdgeList<char>>::get_instance().get_allocations_count() - 1 +
-		Allocator<FullEdgeMap<char, 26>>::get_instance().get_allocations_count() - 1;
+	int allocations = 1;
+	allocations += Allocator<PartialEdgeList<char>>::get_instance().get_allocations_count() - 1;
+	allocations += Allocator<FullEdgeMap<char, 26>>::get_instance().get_allocations_count() - 1;
 	printf("%d\n", allocations);
 
 	return 0;
