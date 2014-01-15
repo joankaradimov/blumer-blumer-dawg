@@ -400,10 +400,9 @@ public:
 		return result;
 	}
 
-	PartialEdgeList()
+	PartialEdgeList() : label_count(0)
 	{
-		// TODO: move this to the class that handles the array
-		for (int i = 0; i < max_list_size + 1; i++)
+		for (int i = 0; i < max_list_size; i++)
 		{
 			label_data[i] = 0;
 		}
@@ -430,7 +429,7 @@ public:
 		int current_size = size();
 		label_data[current_size] = letter;
 		edges[current_size] = Edge<CharType>(exit_node, type);
-		increment_size();
+		++label_count;
 	}
 
 	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
@@ -443,7 +442,7 @@ public:
 
 	int size() const
 	{
-		return label_data[max_list_size];
+		return label_count;
 	}
 
 	bool is_full() const
@@ -503,15 +502,8 @@ private:
 		return -1;
 	}
 
-	void increment_size()
-	{
-		label_data[max_list_size] += 1;
-	}
-
-	// TODO: test alignment and waste of memory
-	// label_data[0 ... max_list_size-1] contains the taken labels
-	// label_data[0 ... max_list_size] contains the number of taken labels
-	unsigned char label_data[max_list_size + 1]; // TODO: make these a bit field array (5 bits each)
+	unsigned char label_data[max_list_size];
+	unsigned char label_count;
 	Edge<CharType> edges[max_list_size];
 };
 
