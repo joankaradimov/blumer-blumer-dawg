@@ -86,6 +86,17 @@ char* read_input(const char* const filename)
 	return result;
 }
 
+void test()
+{
+#ifndef NDEBUG
+	PartialEdgeList<char, 3> lists[2];
+	assert(sizeof(lists) == 32);
+
+	Node<char> nodes[2];
+	assert(sizeof(nodes) == 16);
+#endif
+}
+
 int main(int argc, char* argv[])
 {
 	const char* input_filename = argv[1];
@@ -105,6 +116,8 @@ int main(int argc, char* argv[])
 	allocations += Allocator<PartialEdgeList<char>>::get_instance().get_allocations_count() - 1;
 	allocations += Allocator<FullEdgeMap<char, 26>>::get_instance().get_allocations_count() - 1;
 	printf("%d\n", allocations);
+
+	test();
 
 	return 0;
 }

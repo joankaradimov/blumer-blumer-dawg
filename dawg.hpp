@@ -19,6 +19,10 @@ public:
 		}
 	}
 
+	const Node<CharType>& get_source()
+	{
+		return *source_ptr;
+	}
 private:
 	AllocatorPtr<Node<CharType>> update(AllocatorPtr<Node<CharType>> active_node_ptr, CharType letter)
 	{
