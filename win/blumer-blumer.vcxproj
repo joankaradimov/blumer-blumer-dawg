@@ -18,6 +18,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\blumer-blumer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\dawg.hpp" />
+    <ClInclude Include="..\memory.hpp" />
+    <ClInclude Include="..\nodes.hpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{2EE7CDC1-37A7-48C6-835C-AC698B93CE64}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -68,15 +76,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)..\bin\$(Configuration)\</OutDir>
+    <IntDir>..\bin\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)..\bin\$(Configuration)\</OutDir>
+    <IntDir>..\bin\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)..\bin\$(Configuration)\</OutDir>
+    <IntDir>..\bin\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)..\bin\$(Configuration)\</OutDir>
+    <IntDir>..\bin\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -138,14 +154,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="blumer-blumer.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="dawg.hpp" />
-    <ClInclude Include="memory.hpp" />
-    <ClInclude Include="nodes.hpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

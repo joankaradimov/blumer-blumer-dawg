@@ -10,7 +10,7 @@ school year 2013-14.
 
 ## Usage
 
-On Windows/VS2013 - open blumer-blumer.sln
+On Windows/VS2013 - open `win\blumer-blumer.sln`
 
 On Linux - run `make`; then `./blumer-blumer some-input-file`
 
