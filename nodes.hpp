@@ -229,11 +229,12 @@ protected:
 
 	bool is_of_type(EdgeCollectionType type) const
 	{
-		switch (type)
+		if (type == EdgeCollectionType::single_node)
 		{
-		case EdgeCollectionType::single_node:
 			return ptr_type > 0 && ptr_type <= alphabet_size;
-		default:
+		}
+		else
+		{
 			return ptr_type == type;
 		}
 	}
