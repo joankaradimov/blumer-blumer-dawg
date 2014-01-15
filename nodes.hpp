@@ -42,7 +42,7 @@ public:
 		}
 		else if (is_of_type(EdgeCollectionType::partial_edge_list))
 		{
-			Allocator<PartialEdgeList<CharType, alphabet_size>>& allocator = Allocator<PartialEdgeList<CharType>>::get_instance();
+			Allocator<PartialEdgeList<CharType, alphabet_size>>& allocator = Allocator<PartialEdgeList<CharType, alphabet_size>>::get_instance();
 			ptr_to_partial_edge_list().~PartialEdgeList<CharType>();
 			allocator.free(ptr);
 		}
