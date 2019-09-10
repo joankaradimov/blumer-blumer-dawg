@@ -320,7 +320,7 @@ template <typename CharType>
 class EmptyEdgeCollection : private Node<CharType>
 {
 public:
-	const Edge<CharType> get_edge(CharType letter) const
+	const Edge<CharType> get_edge(CharType) const
 	{
 		return Edge<CharType>::non_existant();
 	}
@@ -332,7 +332,7 @@ public:
 		this->outgoing_edge_type = type;
 	}
 
-	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
+	void set_edge_props(CharType, AllocatorPtr<Node<CharType>>, EdgeType)
 	{
 		assert(false);
 	}
@@ -370,7 +370,7 @@ public:
 		assert(false);
 	}
 
-	void set_edge_props(CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
+	void set_edge_props([[maybe_unused]] CharType letter, AllocatorPtr<Node<CharType>> exit_node, EdgeType type)
 	{
 		assert(this->ptr_type == letter);
 		this->outgoing_edge_type = type;
