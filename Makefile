@@ -17,29 +17,30 @@ all: $(TARGET)
 
 .INTERMEDIATE: $(PROFILING)
 
-$(TARGET): $(HEADERS) $(TARGET).cpp $(PROFILING)
-	$(CC) -fprofile-use $(CFLAGS) $(DEFINES) -o $(TARGET) $(TARGET).cpp
+build-dir:
+	mkdir -p build
 
-$(TARGET).gcda: $(TARGET)-profiling example-data-10
-	./$(TARGET)-profiling example-data-10 > /dev/null
+$(TARGET): build-dir $(HEADERS) $(TARGET).cpp $(PROFILING)
+	$(CC) -fprofile-use $(CFLAGS) $(DEFINES) -o build/$(TARGET) $(TARGET).cpp
 
-$(TARGET)-profiling: $(HEADERS) $(TARGET).cpp
-	$(CC) -fprofile-generate $(CFLAGS) $(DEFINES) -o $(TARGET)-profiling $(TARGET).cpp
+$(TARGET).gcda: build-dir $(TARGET)-profiling example-data-10
+	build/$(TARGET)-profiling build-dir/example-data-10 > /dev/null
+
+$(TARGET)-profiling: build-dir $(HEADERS) $(TARGET).cpp
+	$(CC) -fprofile-generate $(CFLAGS) $(DEFINES) -o build/$(TARGET)-profiling $(TARGET).cpp
 
 clean:
-	$(RM) $(TARGET)
-	$(RM) generate-data
-	$(RM) $(PROFILING)
+	$(RM) build/*
 
-generate-data: generate-data.cpp
-	$(CC) -o generate-data generate-data.cpp
+generate-data: build-dir generate-data.cpp
+	$(CC) -o build/generate-data generate-data.cpp
 
-example-data-10: generate-data
-	./generate-data 1337 10000000 > example-data-10
+example-data-10: build-dir generate-data
+	build/generate-data 1337 10000000 > build/example-data-10
 
-example-data-50: generate-data
-	./generate-data 1337 50000000 > example-data-50
+example-data-50: build-dir generate-data
+	build/generate-data 1337 50000000 > build/example-data-50
 
 clean-example-data:
-	$(RM) example-data-10
-	$(RM) example-data-50
+	$(RM) build/example-data-10
+	$(RM) build/example-data-50
