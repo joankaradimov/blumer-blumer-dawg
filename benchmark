@@ -3,10 +3,10 @@
 OUT=benchmark-results
 
 make
-echo -e "\t"Executable size: `cat build/blumer-blumer | wc -c` > $OUT
+echo "\t"Executable size: `cat build/blumer-blumer | wc -c` > $OUT
 
 make example-data-50
-echo -e "\t"Example data size: `cat build/example-data-50 | wc -c` >> $OUT
+echo "\t"Example data size: `cat build/example-data-50 | wc -c` >> $OUT
 
 /usr/bin/time -v build/blumer-blumer build/example-data-50 2>&1 | egrep "User time|System time|Maximum resident set" >> $OUT
 
