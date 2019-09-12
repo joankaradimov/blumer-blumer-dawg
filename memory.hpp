@@ -100,7 +100,6 @@ public:
 	bool is_valid(int index)
 	{
 		int chunk_index = index / chunk_size;
-		int inner_index = index % chunk_size;
 		return chunk_index < chunk_counter && index <= allocations_count;
 	}
 
