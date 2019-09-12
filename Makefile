@@ -24,7 +24,7 @@ $(TARGET): build-dir $(HEADERS) $(TARGET).cpp $(PROFILING)
 	$(CC) -fprofile-use $(CFLAGS) $(DEFINES) -o build/$(TARGET) $(TARGET).cpp
 
 $(TARGET).gcda: build-dir $(TARGET)-profiling example-data-10
-	build/$(TARGET)-profiling build-dir/example-data-10 > /dev/null
+	build/$(TARGET)-profiling build/example-data-10 > /dev/null
 
 $(TARGET)-profiling: build-dir $(HEADERS) $(TARGET).cpp
 	$(CC) -fprofile-generate $(CFLAGS) $(DEFINES) -o build/$(TARGET)-profiling $(TARGET).cpp
